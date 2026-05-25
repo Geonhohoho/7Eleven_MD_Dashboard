@@ -1,0 +1,36 @@
+export const dashboardData = {
+  menu: ['대시보드', '센터 분석', '상품 분석', '리스크 관리', '설정'],
+  filters: ['기간: 최근 30일', '카테고리: 전체', '센터: 15개', '모델: CatBoost'],
+  summary: [
+    { label: '총 권장 발주량', value: '128,340', change: '+6.2%' },
+    { label: '재고 부족 위험 상품', value: '47', change: '-3.8%' },
+    { label: '과잉 발주 위험 상품', value: '31', change: '+1.5%' },
+    { label: '평균 소진일', value: '12.4일', change: '-0.9%' },
+  ],
+  lineChart: [
+    { date: '04/25', value: 3200 },
+    { date: '04/29', value: 4100 },
+    { date: '05/03', value: 3700 },
+    { date: '05/07', value: 4550 },
+    { date: '05/11', value: 4980 },
+    { date: '05/15', value: 4420 },
+    { date: '05/19', value: 5300 },
+    { date: '05/23', value: 4880 },
+  ],
+  categoryChart: [
+    { name: '과자', value: 92 },
+    { name: '음료', value: 86 },
+    { name: '용기면', value: 74 },
+    { name: '유제품', value: 61 },
+    { name: '냉장간편식', value: 58 },
+    { name: '아이스크림', value: 49 },
+  ],
+  tableRows: [
+    { center: '수원', item: '포카칩 오리지널 66g', demand: 1250, recommend: 1320, risk: '부족' },
+    { center: '양산', item: '삼각김밥 전주비빔', demand: 980, recommend: 940, risk: '과잉' },
+    { center: '광주', item: '컵누들 매콤한맛', demand: 760, recommend: 810, risk: '부족' },
+    { center: '김해', item: '핫바 더블치즈', demand: 640, recommend: 620, risk: '정상' },
+    { center: '오산', item: '트레비 레몬 500ml', demand: 1430, recommend: 1470, risk: '부족' },
+    { center: '대전', item: '요거트 딸기 150g', demand: 520, recommend: 500, risk: '정상' },
+  ],
+}
