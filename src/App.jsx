@@ -156,9 +156,9 @@ function App() {
     : '0.0'
   const selectedDetail = data?.itemDetails?.[selectedItemCode]
 
-  const buildLinePath = (points, width, height, pad) => {
-    const max = Math.max(...points.map((p) => p.qty), 1)
-    const min = Math.min(...points.map((p) => p.qty), 0)
+  const buildLinePath = (points, width, height, pad, bounds = null) => {
+    const max = bounds?.max ?? Math.max(...points.map((p) => p.qty), 1)
+    const min = bounds?.min ?? Math.min(...points.map((p) => p.qty), 0)
     const range = Math.max(max - min, 1)
     const stepX = (width - pad * 2) / Math.max(points.length - 1, 1)
     return points
@@ -168,6 +168,42 @@ function App() {
         return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`
       })
       .join(' ')
+  }
+  const pointXY = (point, idx, points, width, height, pad, bounds = null) => {
+    const max = bounds?.max ?? Math.max(...points.map((p) => p.qty), 1)
+    const min = bounds?.min ?? Math.min(...points.map((p) => p.qty), 0)
+    const range = Math.max(max - min, 1)
+    const stepX = (width - pad * 2) / Math.max(points.length - 1, 1)
+    const x = pad + stepX * idx
+    const y = height - pad - ((point.qty - min) / range) * (height - pad * 2)
+    return { x, y }
+  }
+  const buildAreaPath = (points, width, height, pad, bounds = null) => {
+    if (!points.length) return ''
+    const max = bounds?.max ?? Math.max(...points.map((p) => p.qty), 1)
+    const min = bounds?.min ?? Math.min(...points.map((p) => p.qty), 0)
+    const range = Math.max(max - min, 1)
+    const stepX = (width - pad * 2) / Math.max(points.length - 1, 1)
+    const toXY = (p, idx) => {
+      const x = pad + stepX * idx
+      const y = height - pad - ((p.qty - min) / range) * (height - pad * 2)
+      return [x, y]
+    }
+    const first = toXY(points[0], 0)
+    const last = toXY(points[points.length - 1], points.length - 1)
+    const line = points
+      .map((p, idx) => {
+        const [x, y] = toXY(p, idx)
+        return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`
+      })
+      .join(' ')
+    return `${line} L ${last[0]} ${height - pad} L ${first[0]} ${height - pad} Z`
+  }
+  const formatMd = (dateText) => {
+    if (!dateText) return ''
+    const parts = String(dateText).split('-')
+    if (parts.length < 3) return dateText
+    return `${parts[1]}/${parts[2]}`
   }
   const toEaFromBox = (boxQty, lduEa) => Math.round(Number(boxQty || 0) * Math.max(Number(lduEa || 1), 1))
   const mlRecommendEa = (row) => Number(row.mlRecommendQty || row.recommendQty || 0)
@@ -342,6 +378,12 @@ function App() {
                 </span>
               )}
             </section>
+            <section className="alert">
+              <p className="manual-label">사용 가이드</p>
+              <h3 className="manual-title">금일 신상품 작업 메뉴얼</h3>
+              <p className="manual-text">오늘 마감 대상 신상품의 권장 발주량과 예상 출고율을 확인하고 발주 수량을 입력/확정할 수 있습니다.</p>
+              <p className="manual-text">사용 순서: 상품 선택 → 발주 수량 입력(박스) → 센터 분배/추세선 확인 → 발주 확정</p>
+            </section>
             <section className="criteria-strip">
               <span className="kpi high">과발주: 출고율 &lt; 50%</span>
               <span className="kpi ok">정상발주: 50% ~ 100%</span>
@@ -353,8 +395,6 @@ function App() {
               <article className="card"><h3>검토 필요 상품 수</h3><strong>{riskItemCount}개</strong><p>출고율 50% 미만 또는 100% 초과</p></article>
               <article className="card"><h3>발주 완료</h3><strong>{confirmedCount} / {newItemCount}개</strong><p>예약주문 4일 기준 발주 마감</p></article>
             </section>
-
-            <section className="alert">해당 공간은 MD이 확인할 수 있는 공지사항을 넣을 수 있습니다.</section>
 
             <section className="table-wrap">
               {weeklyRows.length === 0 && (
@@ -654,6 +694,12 @@ function App() {
               엑셀 다운로드
             </button>
           </section>
+          <section className="alert">
+            <p className="manual-label">사용 가이드</p>
+            <h3 className="manual-title">과거 신상품 조회 메뉴얼</h3>
+            <p className="manual-text">과거 출시 상품의 발주/출고 성과를 조회하고, 상품 클릭 시 예약주문·센터분배·ML 대비 실제 차이를 확인할 수 있습니다.</p>
+            <p className="manual-text">사용 순서: 날짜/분류/정렬/검색 필터 선택 → 행 클릭 상세 확인 → 과거 발주량·출고율·판정 비교</p>
+          </section>
           <section className="criteria-strip">
             <span className="kpi high">과발주: 출고율 &lt; 50%</span>
             <span className="kpi ok">정상발주: 50% ~ 100%</span>
@@ -674,19 +720,47 @@ function App() {
                 {filteredPastRows.map((row) => {
                   const pastDetail = data?.itemDetails?.[`${row.itemCode}_${row.releaseDate}`]
                   const reservation4d = pastDetail?.reservation4d || []
+                  const reservationPre = pastDetail?.reservationPreRelease || reservation4d
                   const centerDist = pastDetail?.centerDistribution || []
+                  const centerPerf = pastDetail?.centerPerformance7d || []
+                  const postReleaseOutflow7d = pastDetail?.postReleaseOutflow7d || []
                   const centerMax = Math.max(...centerDist.map((c) => Number(c.qty || 0)), 1)
+                  const reservationPreCumulative = reservationPre.reduce((acc, p, idx) => {
+                    const prev = idx > 0 ? acc[idx - 1].qty : 0
+                    acc.push({ date: p.date, qty: prev + Number(p.qty || 0) })
+                    return acc
+                  }, [])
+                  const postReleaseOutflow7dCumulative = postReleaseOutflow7d.reduce((acc, p, idx) => {
+                    const prev = idx > 0 ? acc[idx - 1].qty : 0
+                    acc.push({ date: p.date, qty: prev + Number(p.qty || 0) })
+                    return acc
+                  }, [])
+                  const pre4dSum = Number(pastDetail?.reservationPre4dSum ?? reservation4d.reduce((s, p) => s + Number(p.qty || 0), 0))
+                  const preTotalSum = Number(pastDetail?.reservationPreTotalSum ?? reservationPre.reduce((s, p) => s + Number(p.qty || 0), 0))
+                  const centerPerfMap = Object.fromEntries(centerPerf.map((c) => [c.centerName, Number(c.outflowRate7d || 0)]))
+                  const unifiedSeries = [
+                    ...reservationPre.map((x) => Number(x.qty || 0)),
+                    ...reservationPreCumulative.map((x) => Number(x.qty || 0)),
+                    ...postReleaseOutflow7d.map((x) => Number(x.qty || 0)),
+                    ...postReleaseOutflow7dCumulative.map((x) => Number(x.qty || 0)),
+                  ]
+                  const unifiedBounds = {
+                    min: 0,
+                    max: Math.max(...unifiedSeries, 1),
+                  }
                   const mlEa = Number(pastDetail?.formula?.totalRecommendQty || 0)
                   const actualEa = Number(row.actualOrderQty || 0)
                   const mlGap = actualEa - mlEa
                   const mlGapPct = mlEa > 0 ? Math.round((mlGap / mlEa) * 1000) / 10 : 0
                   const actualVsMlRatio = mlEa > 0 ? actualEa / mlEa : 0
-                  const compareLabel = mlEa <= 0 ? '비교불가' : actualVsMlRatio > 1.1 ? '과다' : actualVsMlRatio < 0.9 ? '부족' : '유사'
-                  const compareClass = compareLabel === '과다' ? 'high' : compareLabel === '부족' ? 'low' : compareLabel === '유사' ? 'ok' : ''
+                  const compareLabel = mlEa <= 0 ? '비교 불가' : actualVsMlRatio > 1.1 ? '과대 발주' : actualVsMlRatio < 0.9 ? '과소 발주' : '적정 발주'
+                  const compareClass = compareLabel === '과대 발주' ? 'high' : compareLabel === '과소 발주' ? 'low' : compareLabel === '적정 발주' ? 'ok' : ''
                   const mlExpectedRate = mlEa > 0 ? Math.round((Number(row.actualOutflow7d || 0) / mlEa) * 1000) / 10 : 0
                   const outflow7d = Number(row.actualOutflow7d || 0)
                   const normalMinEa = outflow7d
                   const normalMaxEa = outflow7d * 2
+                  const pastRateBand = outflowBand(Number(row.salesRate || 0))
+                  const pastQtyTone = pastRateBand === 'over' ? 'high' : pastRateBand === 'shortage' ? 'low' : 'ok'
                   return (
                   <Fragment key={row.rowKey}>
                   <tr
@@ -704,7 +778,7 @@ function App() {
                     <td>{row.categoryMid}</td>
                     <td>{row.categorySub}</td>
                     <td className="qty">
-                      {Number(row.actualOrderQty).toLocaleString()}개
+                      <span className={`past-order-value ${pastQtyTone}`}>{Number(row.actualOrderQty).toLocaleString()}개</span>
                       {row.actualDataReason ? <small className="cell-reason">{row.actualDataReason}</small> : null}
                     </td>
                     <td>
@@ -716,49 +790,138 @@ function App() {
                     <tr className="expand-row">
                       <td colSpan={8}>
                         <div className="inline-viz-grid past-detail-grid">
-                          <article className="viz-card">
-                            <h3>예약주문 수량 시각화</h3>
-                            {reservation4d.length > 0 ? (
+                          <article className="viz-card stacked-chart-card">
+                            {reservationPre.length > 0 ? (
                               <>
+                                <div className="chart-block">
+                                  <h3>예약주문 수량 시각화</h3>
+                                <div className="chart-meta-row">
+                                  <p>예약주문 초기 4일 합: <strong>{pre4dSum.toLocaleString()}</strong></p>
+                                  <p>예약주문 수량 합: <strong>{preTotalSum.toLocaleString()}</strong></p>
+                                  <span className="chart-legend-inline">실선: 일자별 예약주문 · 점선: 누적합</span>
+                                </div>
                                 <svg className="trend-line" viewBox="0 0 560 210" preserveAspectRatio="none">
-                                  <path d={buildLinePath(reservation4d, 560, 210, 24)} fill="none" stroke="#0c7a43" strokeWidth="3" />
-                                  {reservation4d.map((p, idx) => {
-                                    const pts = reservation4d
-                                    const max = Math.max(...pts.map((x) => x.qty), 1)
-                                    const min = Math.min(...pts.map((x) => x.qty), 0)
-                                    const range = Math.max(max - min, 1)
-                                    const x = 24 + ((560 - 48) / Math.max(pts.length - 1, 1)) * idx
-                                    const y = 210 - 24 - ((p.qty - min) / range) * (210 - 48)
-                                    return <circle key={p.date} cx={x} cy={y} r="4.5" fill="#0c7a43" />
+                                  <path d={buildAreaPath(reservationPreCumulative, 560, 210, 24, unifiedBounds)} fill="#dcfce7" opacity="0.7" />
+                                  <path d={buildLinePath(reservationPreCumulative, 560, 210, 24, unifiedBounds)} fill="none" stroke="#16a34a" strokeWidth="2" strokeDasharray="5 4" />
+                                  <path d={buildLinePath(reservationPre, 560, 210, 24, unifiedBounds)} fill="none" stroke="#0c7a43" strokeWidth="3" />
+                                  {reservationPre.map((p, idx) => {
+                                    const { x, y } = pointXY(p, idx, reservationPre, 560, 210, 24, unifiedBounds)
+                                    return (
+                                      <g key={p.date}>
+                                        <circle cx={x} cy={y} r="4.5" fill="#0c7a43" />
+                                        <text x={x} y={Math.max(14, y - 8)} textAnchor="middle" fontSize="10" fill="#14532d">
+                                          {Number(p.qty).toLocaleString()}
+                                        </text>
+                                      </g>
+                                    )
+                                  })}
+                                  {reservationPreCumulative.length > 0 && (() => {
+                                    const lastIdx = reservationPreCumulative.length - 1
+                                    const last = reservationPreCumulative[lastIdx]
+                                    const { x, y } = pointXY(last, lastIdx, reservationPreCumulative, 560, 210, 24, unifiedBounds)
+                                    return (
+                                      <text x={x - 6} y={Math.max(14, y - 10)} textAnchor="end" fontSize="10" fill="#166534">
+                                        누적 {Number(last.qty).toLocaleString()}
+                                      </text>
+                                    )
+                                  })()}
+                                  {reservationPre.map((p, idx) => {
+                                    const { x } = pointXY(p, idx, reservationPre, 560, 210, 24, unifiedBounds)
+                                    return (
+                                      <text key={`x-pre-${p.date}`} x={x} y={206} textAnchor="middle" fontSize="10" fill="#64748b">
+                                        {formatMd(p.date)}
+                                      </text>
+                                    )
                                   })}
                                 </svg>
-                                <div className="day-rows">
-                                  {reservation4d.map((p) => (
-                                    <div className="day-row" key={p.date}>
-                                      <span>{p.date}</span>
-                                      <strong>{Number(p.qty).toLocaleString()}</strong>
-                                    </div>
-                                  ))}
                                 </div>
+                                {postReleaseOutflow7d.length > 0 && (
+                                  <div className="chart-block">
+                                    <h3 className="subchart-title">출시 후 7일 출고 흐름</h3>
+                                    <div className="chart-meta-row">
+                                      <p>출시 후 센터 7일 출고 합: <strong>{postReleaseOutflow7d.reduce((s, p) => s + Number(p.qty || 0), 0).toLocaleString()}</strong></p>
+                                      <span className="chart-legend-inline">실선: 일자별 출고 · 점선: 누적합</span>
+                                    </div>
+                                    <svg className="trend-line" viewBox="0 0 560 210" preserveAspectRatio="none">
+                                      <path d={buildAreaPath(postReleaseOutflow7dCumulative, 560, 210, 24, unifiedBounds)} fill="#dbeafe" opacity="0.75" />
+                                      <path d={buildLinePath(postReleaseOutflow7dCumulative, 560, 210, 24, unifiedBounds)} fill="none" stroke="#1d4ed8" strokeWidth="2" strokeDasharray="5 4" />
+                                      <path d={buildLinePath(postReleaseOutflow7d, 560, 210, 24, unifiedBounds)} fill="none" stroke="#2563eb" strokeWidth="3" />
+                                      {postReleaseOutflow7d.map((p, idx) => {
+                                        const { x, y } = pointXY(p, idx, postReleaseOutflow7d, 560, 210, 24, unifiedBounds)
+                                        return (
+                                          <g key={`post-${p.date}`}>
+                                            <circle cx={x} cy={y} r="4" fill="#2563eb" />
+                                            <text x={x} y={Math.max(12, y - 8)} textAnchor="middle" fontSize="10" fill="#1e3a8a">
+                                              {Number(p.qty).toLocaleString()}
+                                            </text>
+                                          </g>
+                                        )
+                                      })}
+                                      {postReleaseOutflow7dCumulative.length > 0 && (() => {
+                                        const lastIdx = postReleaseOutflow7dCumulative.length - 1
+                                        const last = postReleaseOutflow7dCumulative[lastIdx]
+                                        const { x, y } = pointXY(last, lastIdx, postReleaseOutflow7dCumulative, 560, 210, 24, unifiedBounds)
+                                        return (
+                                          <text x={x - 6} y={Math.max(14, y - 10)} textAnchor="end" fontSize="10" fill="#1e3a8a">
+                                            누적 {Number(last.qty).toLocaleString()}
+                                          </text>
+                                        )
+                                      })()}
+                                      {postReleaseOutflow7d.map((p, idx) => {
+                                        const { x } = pointXY(p, idx, postReleaseOutflow7d, 560, 210, 24, unifiedBounds)
+                                        return (
+                                          <text key={`x-post-${p.date}`} x={x} y={206} textAnchor="middle" fontSize="10" fill="#64748b">
+                                            {formatMd(p.date)}
+                                          </text>
+                                        )
+                                      })}
+                                    </svg>
+                                  </div>
+                                )}
                               </>
                             ) : (
                               <p className="formula-note">예약주문 데이터가 없습니다.</p>
                             )}
                           </article>
-                          <article className="viz-card">
-                            <h3>실제 센터 분배량</h3>
+                          <article className="viz-card center-map-card">
+                            <h3>실제 센터 분배량 · 성과 맵</h3>
+                            <div className="center-legend">
+                              <span className="kpi high">과발주 &lt; 50%</span>
+                              <span className="kpi ok">정상발주 50~100%</span>
+                              <span className="kpi low">과소발주 &gt; 100%</span>
+                            </div>
                             {centerDist.length > 0 ? (
                               <div className="center-bars">
                                 {centerDist.map((c) => (
-                                  <div key={c.centerName} className="center-row">
-                                    <span>{c.centerName}</span>
-                                    <div className="center-track">
-                                      <div className="center-fill ok" style={{ width: `${Math.round((Number(c.qty || 0) / centerMax) * 100)}%` }} />
-                                    </div>
-                                    <div className="center-edit">
-                                      <strong>{Number(c.qty || 0).toLocaleString()}개</strong>
-                                    </div>
-                                  </div>
+                                  (() => {
+                                    const rate = centerPerfMap[c.centerName] ?? 0
+                                    const band = outflowBand(rate)
+                                    const tone = band === 'over' ? 'high' : band === 'shortage' ? 'low' : 'ok'
+                                    const statusLabel = band === 'over' ? '과발주' : band === 'shortage' ? '과소발주' : '정상발주'
+
+                                    return (
+                                      <div key={c.centerName} className="center-row">
+                                        <span>{c.centerName}</span>
+                                        <div className="center-track-wrap">
+                                          <div className="center-track">
+                                            <div className="center-fill base" style={{ width: `${Math.round((Number(c.qty || 0) / centerMax) * 100)}%` }} />
+                                            <div
+                                              className={`center-fill ${tone}`}
+                                              style={{
+                                                width: `${Math.round((Number(c.qty || 0) / centerMax) * (Math.min(rate, 100) / 100) * 100)}%`,
+                                                opacity: 0.95,
+                                              }}
+                                            />
+                                          </div>
+                                          <small className={`center-status ${tone}`}>{statusLabel}</small>
+                                        </div>
+                                        <div className="center-edit">
+                                          <strong>{Number(c.qty || 0).toLocaleString()}개</strong>
+                                          <small>7일 소화율 {Number(rate).toFixed(1)}%</small>
+                                        </div>
+                                      </div>
+                                    )
+                                  })()
                                 ))}
                               </div>
                             ) : (
