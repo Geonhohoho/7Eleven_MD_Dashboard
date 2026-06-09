@@ -133,6 +133,29 @@ tbody tr { cursor:pointer; }
 .center-bars { display:grid; gap:8px; }
 .center-row { display:grid; grid-template-columns: 108px 1fr 152px; gap:10px; align-items:center; }
 .center-row span { font-size:11px; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.center-row { position:relative; }
+.center-row::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: 0;
+  top: -24px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(2px);
+  pointer-events: none;
+  transition: opacity 0.08s ease, transform 0.08s ease;
+  z-index: 20;
+}
+.center-row:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
 .center-track { position:relative; height:9px; border-radius:99px; background:#e5e7eb; overflow:hidden; }
 .center-fill { position:absolute; left:0; top:0; height:100%; background:#3b82f6; border-radius:99px; }
 .center-fill.base { background:#94a3b8; opacity:0.45; }

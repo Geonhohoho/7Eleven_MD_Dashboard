@@ -48,7 +48,6 @@ function App() {
             }),
           ),
         )
-        if (initRows.length > 0) setSelectedItemCode(initRows[0].rowKey)
       })
   }, [])
 
@@ -136,7 +135,7 @@ function App() {
     setQtyMap((prev) => {
       const next = { ...prev }
       for (const r of filteredRows) {
-        if (next[r.rowKey] === undefined || next[r.rowKey] === '') {
+        if (next[r.rowKey] === undefined) {
           const ldu = Math.max(Number(r.lduEa || 1), 1)
           const recoEa = Number(r.mlRecommendQty || r.recommendQty || r.inputQty || 0)
           next[r.rowKey] = String(Math.round(recoEa / ldu))
@@ -145,7 +144,7 @@ function App() {
       return next
     })
     if (selectedItemCode && !filteredRows.find((r) => r.rowKey === selectedItemCode)) {
-      setSelectedItemCode(filteredRows[0].rowKey)
+      setSelectedItemCode('')
     }
   }, [filteredRows, selectedItemCode])
 
@@ -895,12 +894,17 @@ function App() {
                                 {centerDist.map((c) => (
                                   (() => {
                                     const rate = centerPerfMap[c.centerName] ?? 0
+                                    const outflowQty = (centerPerf.find((p) => p.centerName === c.centerName)?.outflow7d ?? 0)
                                     const band = outflowBand(rate)
                                     const tone = band === 'over' ? 'high' : band === 'shortage' ? 'low' : 'ok'
                                     const statusLabel = band === 'over' ? '과발주' : band === 'shortage' ? '과소발주' : '정상발주'
 
                                     return (
-                                      <div key={c.centerName} className="center-row">
+                                      <div
+                                        key={c.centerName}
+                                        className="center-row"
+                                        data-tooltip={`7일 소화 물량: ${Number(outflowQty || 0).toLocaleString()}개`}
+                                      >
                                         <span>{c.centerName}</span>
                                         <div className="center-track-wrap">
                                           <div className="center-track">
