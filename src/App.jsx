@@ -74,7 +74,7 @@ function App() {
     const isDeadlineDay = (r.deadlineDate || '') === selectedBaseDate
     return hasFull4Days && isDeadlineDay
   })
-  const pastRows = data?.pastRows ?? []
+  const pastRows = useMemo(() => data?.pastRows ?? [], [data])
   const pastRowsWithKey = useMemo(
     () => pastRows.map((r) => ({ ...r, rowKey: `${r.releaseDate}_${r.itemCode}_${r.itemName}` })),
     [pastRows],
@@ -116,44 +116,10 @@ function App() {
     return sorted
   }, [pastRowsWithKey, pastCategory, pastCategoryMid, pastCategorySub, pastDateFrom, pastDateTo, pastSort, pastQuery])
 
-  useEffect(() => {
-    const cats = pastCategoryOptions
-    const mids = pastCategoryMidOptions
-    const subs = pastCategorySubOptions
-    if (!cats.includes(pastCategory)) setPastCategory('전체')
-    if (!mids.includes(pastCategoryMid)) setPastCategoryMid('전체')
-    if (!subs.includes(pastCategorySub)) setPastCategorySub('전체')
-  }, [pastCategoryOptions, pastCategoryMidOptions, pastCategorySubOptions, pastCategory, pastCategoryMid, pastCategorySub])
-
   const filteredRows = useMemo(() => weeklyRows, [weeklyRows])
-
-  useEffect(() => {
-    if (!filteredRows.length) {
-      setSelectedItemCode('')
-      return
-    }
-    setQtyMap((prev) => {
-      const next = { ...prev }
-      for (const r of filteredRows) {
-        if (next[r.rowKey] === undefined) {
-          const ldu = Math.max(Number(r.lduEa || 1), 1)
-          const recoEa = Number(r.mlRecommendQty || r.recommendQty || r.inputQty || 0)
-          next[r.rowKey] = String(Math.round(recoEa / ldu))
-        }
-      }
-      return next
-    })
-    if (selectedItemCode && !filteredRows.find((r) => r.rowKey === selectedItemCode)) {
-      setSelectedItemCode('')
-    }
-  }, [filteredRows, selectedItemCode])
 
   const confirmedCount = Object.values(confirmedMap).filter(Boolean).length
   const newItemCount = new Set(weeklyRows.map((r) => r.itemCode)).size
-  const avgSalesRate = weeklyRows.length
-    ? (weeklyRows.reduce((acc, r) => acc + r.salesRate, 0) / weeklyRows.length).toFixed(1)
-    : '0.0'
-  const selectedDetail = data?.itemDetails?.[selectedItemCode]
 
   const buildLinePath = (points, width, height, pad, bounds = null) => {
     const max = bounds?.max ?? Math.max(...points.map((p) => p.qty), 1)
@@ -207,7 +173,6 @@ function App() {
   const toEaFromBox = (boxQty, lduEa) => Math.round(Number(boxQty || 0) * Math.max(Number(lduEa || 1), 1))
   const mlRecommendEa = (row) => Number(row.mlRecommendQty || row.recommendQty || 0)
   const mlRecommendBox = (row) => Math.round(mlRecommendEa(row) / Math.max(Number(row.lduEa || 1), 1))
-  const predictedOutflowEa = (row) => Number(row.predictedOutflow7d || 0)
   const currentInputEa = (row) => toEaFromBox(qtyMap[row.rowKey], row.lduEa)
   const currentInputBox = (row) => Number(qtyMap[row.rowKey] || 0)
   const qtyDeltaTone = (row) => {
@@ -228,29 +193,6 @@ function App() {
     const rate = currentOutflowRate(r)
     return rate < 50 || rate > 100
   }).length
-  const adjustedCenterDistribution = (row) => {
-    const detail = data?.itemDetails?.[row.rowKey]
-    const centers = detail?.centerDistribution || []
-    if (!centers.length) return []
-
-    const targetEa = Math.max(currentInputEa(row), 0)
-    const baseTotalEa = centers.reduce((acc, c) => acc + Number(c.qty || 0), 0)
-    if (targetEa <= 0 || baseTotalEa <= 0) {
-      return centers.map((c) => ({ centerName: c.centerName, qty: 0 }))
-    }
-
-    const scaled = centers.map((c) => {
-      const raw = (Number(c.qty || 0) / baseTotalEa) * targetEa
-      const floor = Math.floor(raw)
-      return { centerName: c.centerName, floor, frac: raw - floor }
-    })
-    let remain = targetEa - scaled.reduce((acc, c) => acc + c.floor, 0)
-    scaled.sort((a, b) => b.frac - a.frac)
-    for (let i = 0; i < scaled.length && remain > 0; i += 1, remain -= 1) scaled[i].floor += 1
-    return scaled
-      .sort((a, b) => a.centerName.localeCompare(b.centerName, 'ko'))
-      .map((c) => ({ centerName: c.centerName, qty: c.floor }))
-  }
   const defaultCenterWeights = (row) => {
     const detail = data?.itemDetails?.[row.rowKey]
     const centers = detail?.centerDistribution || []
@@ -380,7 +322,7 @@ function App() {
             <section className="alert">
               <p className="manual-label">사용 가이드</p>
               <h3 className="manual-title">금일 신상품 작업 메뉴얼</h3>
-              <p className="manual-text">오늘 마감 대상 신상품의 권장 발주량과 예상 출고율을 확인하고 발주 수량을 입력/확정할 수 있습니다.</p>
+              <p className="manual-text">오늘 마감 대상 신상품의 최종 모델 v6 운영 추천량과 예상 출고율을 확인하고 발주 수량을 입력/확정할 수 있습니다.</p>
               <p className="manual-text">사용 순서: 상품 선택 → 발주 수량 입력(박스) → 센터 분배/추세선 확인 → 발주 확정</p>
             </section>
             <section className="criteria-strip">
@@ -505,7 +447,10 @@ function App() {
                                       예약주문 4일 총합 = {data.itemDetails[r.rowKey].reservation4d.reduce((acc, p) => acc + Number(p.qty || 0), 0).toLocaleString()}
                                     </p>
                                     <p>
-                                      권장 초도 발주 수량 = {mlRecommendEa(r).toLocaleString()}EA
+                                      운영 추천 초도 발주량 = {mlRecommendEa(r).toLocaleString()}EA
+                                    </p>
+                                    <p className="trend-summary-note">
+                                      최종 모델 v6 calibrated_qty_reco 기준
                                     </p>
                                   </div>
                                   <div className="trend-summary-side">
@@ -576,10 +521,21 @@ function App() {
                                       </div>
                                     )
                                   })()}
-                                  <div className="weight-placeholder">
-                                    <p className="weight-placeholder-main">여기에 뭐 넣을까요?</p>
-                                    <p className="weight-placeholder-main">예상 출고율 고쳐야 함</p>
-                                    <p className="weight-placeholder-note">현재 예상 출고율 로직이 권장 발주량에 맞추어져 있음</p>
+                                  <div className="model-logic-card">
+                                    <p className="model-logic-title">최종 모델 v6 산출 기준</p>
+                                    <div className="model-logic-grid">
+                                      <span>현행 공식</span>
+                                      <strong>{Number(data.itemDetails[r.rowKey].formula?.formulaFixedQty || 0).toLocaleString()}EA</strong>
+                                      <span>재산정 공식</span>
+                                      <strong>{Number(data.itemDetails[r.rowKey].formula?.formulaRecalQty || 0).toLocaleString()}EA</strong>
+                                      <span>보정 전 ML</span>
+                                      <strong>{Number(data.itemDetails[r.rowKey].formula?.modelQty || 0).toLocaleString()}EA</strong>
+                                      <span>운영 추천</span>
+                                      <strong>{Number(data.itemDetails[r.rowKey].formula?.calibratedQtyReco || mlRecommendEa(r)).toLocaleString()}EA</strong>
+                                    </div>
+                                    <p className="model-logic-note">
+                                      운영 추천 = model_qty × α {Number(data.itemDetails[r.rowKey].formula?.alphaRecommended || 1.15).toFixed(2)}
+                                    </p>
                                   </div>
                                 </article>
                               </article>
@@ -648,11 +604,24 @@ function App() {
             <span>~</span>
             <input type="date" value={pastDateTo} onChange={(e) => setPastDateTo(e.target.value)} />
             <label>대분류</label>
-            <select value={pastCategory} onChange={(e) => setPastCategory(e.target.value)}>
+            <select
+              value={pastCategory}
+              onChange={(e) => {
+                setPastCategory(e.target.value)
+                setPastCategoryMid('전체')
+                setPastCategorySub('전체')
+              }}
+            >
               {pastCategoryOptions.map((c) => <option key={`cat-${c}`} value={c}>{c}</option>)}
             </select>
             <label>중분류</label>
-            <select value={pastCategoryMid} onChange={(e) => setPastCategoryMid(e.target.value)}>
+            <select
+              value={pastCategoryMid}
+              onChange={(e) => {
+                setPastCategoryMid(e.target.value)
+                setPastCategorySub('전체')
+              }}
+            >
               {pastCategoryMidOptions.map((c) => <option key={`mid-${c}`} value={c}>{c}</option>)}
             </select>
             <label>소분류</label>
@@ -747,14 +716,18 @@ function App() {
                     min: 0,
                     max: Math.max(...unifiedSeries, 1),
                   }
-                  const mlEa = Number(pastDetail?.formula?.totalRecommendQty || 0)
+                  const modelFormula = pastDetail?.formula || {}
+                  const mlEa = Number(modelFormula.calibratedQtyReco || modelFormula.totalRecommendQty || 0)
+                  const rawModelEa = Number(modelFormula.modelQty || 0)
+                  const fixedFormulaEa = Number(modelFormula.formulaFixedQty || 0)
+                  const recalFormulaEa = Number(modelFormula.formulaRecalQty || 0)
+                  const alphaRecommended = Number(modelFormula.alphaRecommended || 0)
                   const actualEa = Number(row.actualOrderQty || 0)
                   const mlGap = actualEa - mlEa
                   const mlGapPct = mlEa > 0 ? Math.round((mlGap / mlEa) * 1000) / 10 : 0
                   const actualVsMlRatio = mlEa > 0 ? actualEa / mlEa : 0
                   const compareLabel = mlEa <= 0 ? '비교 불가' : actualVsMlRatio > 1.1 ? '과대 발주' : actualVsMlRatio < 0.9 ? '과소 발주' : '적정 발주'
                   const compareClass = compareLabel === '과대 발주' ? 'high' : compareLabel === '과소 발주' ? 'low' : compareLabel === '적정 발주' ? 'ok' : ''
-                  const mlExpectedRate = mlEa > 0 ? Math.round((Number(row.actualOutflow7d || 0) / mlEa) * 1000) / 10 : 0
                   const outflow7d = Number(row.actualOutflow7d || 0)
                   const normalMinEa = outflow7d
                   const normalMaxEa = outflow7d * 2
@@ -943,11 +916,18 @@ function App() {
                                 <p className="ml-line">
                                   정상 발주량 범주(7일): <strong>{normalMinEa.toLocaleString()}EA ~ {normalMaxEa.toLocaleString()}EA</strong>
                                 </p>
+                                <p className="ml-line">
+                                  현행 {fixedFormulaEa.toLocaleString()}EA · 재산정 {recalFormulaEa.toLocaleString()}EA · α {alphaRecommended ? alphaRecommended.toFixed(2) : '-'}
+                                </p>
                               </div>
                               <div className="ml-metrics-grid">
                                 <div className="ml-metric-card">
-                                  <small>ML 권장 초도</small>
+                                  <small>운영 추천 초도</small>
                                   <strong>{mlEa.toLocaleString()}EA</strong>
+                                </div>
+                                <div className="ml-metric-card">
+                                  <small>보정 전 ML</small>
+                                  <strong>{rawModelEa.toLocaleString()}EA</strong>
                                 </div>
                                 <div className="ml-metric-card">
                                   <small>실제 초도</small>
@@ -961,10 +941,6 @@ function App() {
                                 <div className="ml-metric-card">
                                   <small>실제 출고율</small>
                                   <strong>{row.salesRate}%</strong>
-                                </div>
-                                <div className="ml-metric-card">
-                                  <small>ML 기준 기대 출고율</small>
-                                  <strong>{mlExpectedRate}%</strong>
                                 </div>
                               </div>
                             </div>

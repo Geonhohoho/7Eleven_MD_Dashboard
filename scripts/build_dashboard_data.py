@@ -23,6 +23,11 @@ PREDICTIONS_CANDIDATES = [
     ROOT / "public" / "data" / "predictions.parquet",
 ]
 PREDICTIONS_CSV = ROOT / "public" / "data" / "ml_predictions_for_dashboard.csv"
+FINAL_MODEL_PREDICTION_CANDIDATES = [
+    Path("/Users/geonhokim/Desktop/세븐일레븐 내부데이터/대시보드 작업/최종 모델 예정/predictions.csv"),
+    ROOT.parent / "대시보드 작업" / "최종 모델 예정" / "predictions.csv",
+]
+FINAL_MODEL_ALPHA_RECOMMENDED = 1.15
 ITEM_DV_INFO = Path(
     "/Users/geonhokim/Desktop/세븐일레븐 내부데이터/B조/B4_ITEM_DV_INFO.csv"
 )
@@ -103,60 +108,120 @@ def load_center_weight_map() -> dict[str, float]:
     return out
 
 
+def _empty_prediction_group() -> dict[str, float]:
+    return {
+        "modelQty": 0.0,
+        "formulaFixedQty": 0.0,
+        "formulaRecalQty": 0.0,
+        "calibratedQtyAuto": 0.0,
+        "calibratedQtyReco": 0.0,
+        "actualOutflow4dFromModel": 0.0,
+        "reservationAnchorQty": 0.0,
+    }
+
+
+def _prediction_payload_from_group(v: dict[str, float]) -> dict:
+    recommend = v["calibratedQtyReco"] or v["modelQty"]
+    return {
+        "mlRecommendQty": int(round(recommend)),
+        "modelQty": int(round(v["modelQty"])),
+        "formulaFixedQty": int(round(v["formulaFixedQty"])),
+        "formulaRecalQty": int(round(v["formulaRecalQty"])),
+        "calibratedQtyAuto": int(round(v["calibratedQtyAuto"])),
+        "calibratedQtyReco": int(round(v["calibratedQtyReco"])),
+        # Legacy field name retained for current UI compatibility. In final v6 it stores 4-day actual outflow label when available.
+        "predictedOutflow7d": int(round(v["actualOutflow4dFromModel"])),
+        "actualOutflow4dFromModel": int(round(v["actualOutflow4dFromModel"])),
+        "formulaQtyFromModelTable": int(round(v["formulaFixedQty"])),
+        "reservationAnchorQty": int(round(v["reservationAnchorQty"])),
+        "modelSource": "final_v6_calibrated_reco",
+        "modelAlphaRecommended": FINAL_MODEL_ALPHA_RECOMMENDED,
+    }
+
+
+def load_final_model_prediction_csv(path: Path) -> dict[tuple[str, str], dict]:
+    grouped: dict[tuple[str, str], dict[str, float]] = defaultdict(_empty_prediction_group)
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            item = (row.get("ITEM_CODE") or "").strip()
+            ymd = normalize_ymd_key(row.get("NP_RLSE_YMD", ""))
+            if not item or not ymd:
+                continue
+            key = (item, ymd)
+            grouped[key]["modelQty"] += to_float(row.get("model_qty") or row.get("MODEL_QTY") or "0")
+            grouped[key]["formulaFixedQty"] += to_float(row.get("formula_qty") or row.get("FORMULA_QTY") or "0")
+            grouped[key]["formulaRecalQty"] += to_float(row.get("formula_recal_qty") or row.get("FORMULA_RECAL_QTY") or "0")
+            grouped[key]["calibratedQtyAuto"] += to_float(row.get("calibrated_qty_auto") or row.get("CALIBRATED_QTY_AUTO") or "0")
+            grouped[key]["calibratedQtyReco"] += to_float(
+                row.get("calibrated_qty_reco") or row.get("CALIBRATED_QTY_RECO") or row.get("ML_PRED_QTY") or "0"
+            )
+            grouped[key]["actualOutflow4dFromModel"] += to_float(
+                row.get("actual_outflow_4d") or row.get("ACTUAL_OUTFLOW_4D") or row.get("OUTFLOW_4D") or "0"
+            )
+            grouped[key]["reservationAnchorQty"] += to_float(row.get("RES_PREDEC_QTY") or row.get("reservation_anchor_qty") or "0")
+
+    return {k: _prediction_payload_from_group(v) for k, v in grouped.items()}
+
+
+def load_legacy_prediction_csv(path: Path) -> dict[tuple[str, str], dict]:
+    grouped_csv: dict[tuple[str, str], dict[str, float]] = defaultdict(
+        lambda: {"ML_PRED_QTY": 0.0, "OUTFLOW_7D": 0.0, "FORMULA_QTY": 0.0}
+    )
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            item = (row.get("ITEM_CODE") or "").strip()
+            ymd = normalize_ymd_key(row.get("NP_RLSE_YMD", ""))
+            if not item or not ymd:
+                continue
+            key = (item, ymd)
+            grouped_csv[key]["ML_PRED_QTY"] += to_float(row.get("ML_PRED_QTY", "0"))
+            grouped_csv[key]["OUTFLOW_7D"] += to_float(row.get("OUTFLOW_7D", "0"))
+            grouped_csv[key]["FORMULA_QTY"] += to_float(row.get("FORMULA_QTY", "0"))
+    return {
+        k: {
+            "mlRecommendQty": int(round(v["ML_PRED_QTY"])),
+            "modelQty": int(round(v["ML_PRED_QTY"])),
+            "formulaFixedQty": int(round(v["FORMULA_QTY"])),
+            "formulaRecalQty": 0,
+            "calibratedQtyAuto": 0,
+            "calibratedQtyReco": int(round(v["ML_PRED_QTY"])),
+            "predictedOutflow7d": int(round(v["OUTFLOW_7D"])),
+            "actualOutflow4dFromModel": 0,
+            "formulaQtyFromModelTable": int(round(v["FORMULA_QTY"])),
+            "reservationAnchorQty": 0,
+            "modelSource": "legacy_ml_pred_qty",
+            "modelAlphaRecommended": 0,
+        }
+        for k, v in grouped_csv.items()
+    }
+
+
+def load_prediction_csv(path: Path) -> dict[tuple[str, str], dict]:
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        fieldnames = set(reader.fieldnames or [])
+    if {"model_qty", "calibrated_qty_reco"}.issubset(fieldnames) or {"MODEL_QTY", "CALIBRATED_QTY_RECO"}.issubset(fieldnames):
+        return load_final_model_prediction_csv(path)
+    return load_legacy_prediction_csv(path)
+
+
 def load_ml_prediction_map() -> dict[tuple[str, str], dict]:
+    for p in FINAL_MODEL_PREDICTION_CANDIDATES:
+        if p.exists():
+            return load_final_model_prediction_csv(p)
+
+    if PREDICTIONS_CSV.exists():
+        return load_prediction_csv(PREDICTIONS_CSV)
+
     predictions = resolve_first_existing(PREDICTIONS_CANDIDATES)
     if pd is None or not predictions.exists():
-        grouped_csv: dict[tuple[str, str], dict[str, float]] = defaultdict(
-            lambda: {"ML_PRED_QTY": 0.0, "OUTFLOW_7D": 0.0, "FORMULA_QTY": 0.0}
-        )
-        if not PREDICTIONS_CSV.exists():
-            return {}
-        with PREDICTIONS_CSV.open("r", encoding="utf-8-sig", newline="") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                item = (row.get("ITEM_CODE") or "").strip()
-                ymd = normalize_ymd_key(row.get("NP_RLSE_YMD", ""))
-                if not item or not ymd:
-                    continue
-                key = (item, ymd)
-                grouped_csv[key]["ML_PRED_QTY"] += to_float(row.get("ML_PRED_QTY", "0"))
-                grouped_csv[key]["OUTFLOW_7D"] += to_float(row.get("OUTFLOW_7D", "0"))
-                grouped_csv[key]["FORMULA_QTY"] += to_float(row.get("FORMULA_QTY", "0"))
-        return {
-            k: {
-                "mlRecommendQty": int(round(v["ML_PRED_QTY"])),
-                "predictedOutflow7d": int(round(v["OUTFLOW_7D"])),
-                "formulaQtyFromModelTable": int(round(v["FORMULA_QTY"])),
-            }
-            for k, v in grouped_csv.items()
-        }
+        return {}
     try:
         pred = pd.read_parquet(predictions)
     except Exception:
-        grouped_csv: dict[tuple[str, str], dict[str, float]] = defaultdict(
-            lambda: {"ML_PRED_QTY": 0.0, "OUTFLOW_7D": 0.0, "FORMULA_QTY": 0.0}
-        )
-        if not PREDICTIONS_CSV.exists():
-            return {}
-        with PREDICTIONS_CSV.open("r", encoding="utf-8-sig", newline="") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                item = (row.get("ITEM_CODE") or "").strip()
-                ymd = normalize_ymd_key(row.get("NP_RLSE_YMD", ""))
-                if not item or not ymd:
-                    continue
-                key = (item, ymd)
-                grouped_csv[key]["ML_PRED_QTY"] += to_float(row.get("ML_PRED_QTY", "0"))
-                grouped_csv[key]["OUTFLOW_7D"] += to_float(row.get("OUTFLOW_7D", "0"))
-                grouped_csv[key]["FORMULA_QTY"] += to_float(row.get("FORMULA_QTY", "0"))
-        return {
-            k: {
-                "mlRecommendQty": int(round(v["ML_PRED_QTY"])),
-                "predictedOutflow7d": int(round(v["OUTFLOW_7D"])),
-                "formulaQtyFromModelTable": int(round(v["FORMULA_QTY"])),
-            }
-            for k, v in grouped_csv.items()
-        }
+        return {}
 
     required = {"ITEM_CODE", "NP_RLSE_YMD", "ML_PRED_QTY", "OUTFLOW_7D", "FORMULA_QTY"}
     if not required.issubset(set(pred.columns)):
@@ -175,11 +240,58 @@ def load_ml_prediction_map() -> dict[tuple[str, str], dict]:
     return {
         (str(r["ITEM_CODE"]).strip(), normalize_ymd_key(str(r["NP_RLSE_YMD"]))): {
             "mlRecommendQty": int(round(r["ML_PRED_QTY"])),
+            "modelQty": int(round(r["ML_PRED_QTY"])),
+            "formulaFixedQty": int(round(r["FORMULA_QTY"])),
+            "formulaRecalQty": 0,
+            "calibratedQtyAuto": 0,
+            "calibratedQtyReco": int(round(r["ML_PRED_QTY"])),
             "predictedOutflow7d": int(round(r["OUTFLOW_7D"])),
+            "actualOutflow4dFromModel": 0,
             "formulaQtyFromModelTable": int(round(r["FORMULA_QTY"])),
+            "reservationAnchorQty": 0,
+            "modelSource": "legacy_parquet_ml_pred_qty",
+            "modelAlphaRecommended": 0,
         }
         for _, r in grouped.iterrows()
     }
+
+
+def write_dashboard_prediction_csv(prediction_map: dict[tuple[str, str], dict]) -> None:
+    if not prediction_map:
+        return
+    PREDICTIONS_CSV.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "ITEM_CODE",
+        "NP_RLSE_YMD",
+        "ML_PRED_QTY",
+        "MODEL_QTY",
+        "FORMULA_QTY",
+        "FORMULA_RECAL_QTY",
+        "CALIBRATED_QTY_AUTO",
+        "CALIBRATED_QTY_RECO",
+        "OUTFLOW_4D",
+        "RES_PREDEC_QTY",
+        "ALPHA_RECOMMENDED",
+        "MODEL_SOURCE",
+    ]
+    with PREDICTIONS_CSV.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        for (item, ymd), v in sorted(prediction_map.items(), key=lambda kv: (kv[0][1], kv[0][0])):
+            writer.writerow({
+                "ITEM_CODE": item,
+                "NP_RLSE_YMD": ymd,
+                "ML_PRED_QTY": v.get("mlRecommendQty", 0),
+                "MODEL_QTY": v.get("modelQty", 0),
+                "FORMULA_QTY": v.get("formulaFixedQty", 0),
+                "FORMULA_RECAL_QTY": v.get("formulaRecalQty", 0),
+                "CALIBRATED_QTY_AUTO": v.get("calibratedQtyAuto", 0),
+                "CALIBRATED_QTY_RECO": v.get("calibratedQtyReco", 0),
+                "OUTFLOW_4D": v.get("actualOutflow4dFromModel", 0),
+                "RES_PREDEC_QTY": v.get("reservationAnchorQty", 0),
+                "ALPHA_RECOMMENDED": v.get("modelAlphaRecommended", 0),
+                "MODEL_SOURCE": v.get("modelSource", ""),
+            })
 
 
 def load_item_category_map() -> dict[str, tuple[str, str, str]]:
@@ -277,6 +389,7 @@ def compute_post_release_outflow_series_7d(stock_by_day: dict[str, int], release
 def main() -> None:
     source = resolve_first_existing(SOURCE_CANDIDATES)
     ml_prediction_map = load_ml_prediction_map()
+    write_dashboard_prediction_csv(ml_prediction_map)
     center_weight_map = load_center_weight_map()
     item_category_map = load_item_category_map()
     center_stock_map = load_center_stock_map()
@@ -326,8 +439,17 @@ def main() -> None:
                     "price": to_int(row.get("ST_SLEM_AMT", "0")),
                     "recommendQty": 0,
                     "mlRecommendQty": 0,
+                    "modelQty": 0,
+                    "formulaFixedQty": 0,
+                    "formulaRecalQty": 0,
+                    "calibratedQtyAuto": 0,
+                    "calibratedQtyReco": 0,
                     "predictedOutflow7d": 0,
+                    "actualOutflow4dFromModel": 0,
                     "formulaQtyFromModelTable": 0,
+                    "reservationAnchorQty": 0,
+                    "modelSource": "",
+                    "modelAlphaRecommended": 0,
                     "goalIntroRtSum": 0.0,
                     "goalIntroRtCnt": 0,
                     "releaseDate": release_date,
@@ -347,9 +469,22 @@ def main() -> None:
 
             norm_key = (item_code, normalize_ymd_key(ymd))
             if norm_key in ml_prediction_map:
-                grouped[key]["mlRecommendQty"] = ml_prediction_map[norm_key]["mlRecommendQty"]
-                grouped[key]["predictedOutflow7d"] = ml_prediction_map[norm_key]["predictedOutflow7d"]
-                grouped[key]["formulaQtyFromModelTable"] = ml_prediction_map[norm_key]["formulaQtyFromModelTable"]
+                prediction = ml_prediction_map[norm_key]
+                for field in [
+                    "mlRecommendQty",
+                    "modelQty",
+                    "formulaFixedQty",
+                    "formulaRecalQty",
+                    "calibratedQtyAuto",
+                    "calibratedQtyReco",
+                    "predictedOutflow7d",
+                    "actualOutflow4dFromModel",
+                    "formulaQtyFromModelTable",
+                    "reservationAnchorQty",
+                    "modelAlphaRecommended",
+                ]:
+                    grouped[key][field] = prediction.get(field, grouped[key].get(field, 0))
+                grouped[key]["modelSource"] = prediction.get("modelSource", "")
 
     rows = list(grouped.values())
     for r in rows:
@@ -362,7 +497,7 @@ def main() -> None:
         r["salesRate"] = sales_rate
         r["risk"] = risk_from_rate(sales_rate)
         r["inputQty"] = r["mlRecommendQty"] if r["mlRecommendQty"] > 0 else r["recommendQty"]
-        r["formulaQty"] = r["formulaQtyFromModelTable"] if r["formulaQtyFromModelTable"] > 0 else r["recommendQty"]
+        r["formulaQty"] = r["formulaFixedQty"] if r["formulaFixedQty"] > 0 else r["formulaQtyFromModelTable"] if r["formulaQtyFromModelTable"] > 0 else r["recommendQty"]
         item_code = r["itemCode"]
         rel_ymd = normalize_ymd_key(r["releaseDate"].replace("-", ""))
         centers = row_centers.get((item_code, rel_ymd), set())
@@ -544,7 +679,16 @@ def main() -> None:
             "centerOutflow7dSum": center_total_out7,
             "formula": {
                 "totalRecommendQty": formula_qty,
-                "rule": "ML_PRED_QTY 합계 (미존재 시 센터별 INITIAL_ORD_QTY 합계)",
+                "modelQty": to_int(row_info.get("modelQty", 0)),
+                "formulaFixedQty": to_int(row_info.get("formulaFixedQty", 0)),
+                "formulaRecalQty": to_int(row_info.get("formulaRecalQty", 0)),
+                "calibratedQtyAuto": to_int(row_info.get("calibratedQtyAuto", 0)),
+                "calibratedQtyReco": to_int(row_info.get("calibratedQtyReco", 0)),
+                "actualOutflow4dFromModel": to_int(row_info.get("actualOutflow4dFromModel", 0)),
+                "reservationAnchorQty": to_int(row_info.get("reservationAnchorQty", 0)),
+                "alphaRecommended": to_float(row_info.get("modelAlphaRecommended", 0)),
+                "modelSource": row_info.get("modelSource", ""),
+                "rule": "최종 모델 v6 calibrated_qty_reco 합계 (model_qty × 운영 α 1.15, 미존재 시 센터별 INITIAL_ORD_QTY 합계)",
             },
         }
 

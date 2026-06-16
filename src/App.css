@@ -85,6 +85,7 @@ tbody tr { cursor:pointer; }
 .subchart-title { margin:10px 0 8px; font-size:14px; color:#1f2937; }
 .trend-summary { margin-top:10px; padding:10px; border:1px solid #e5e7eb; border-radius:8px; background:#fff; }
 .trend-summary p { margin:2px 0; font-size:13px; color:#1f2937; font-weight:600; }
+.trend-summary-note { color:#64748b !important; font-size:11px !important; font-weight:600 !important; }
 .chart-meta-row { display:flex; align-items:center; gap:12px; margin:0 0 8px; }
 .chart-meta-row p { margin:0; font-size:13px; color:#1f2937; font-weight:700; }
 .chart-legend-inline { margin-left:auto; font-size:12px; color:#6b7280; font-weight:600; white-space:nowrap; }
@@ -185,6 +186,12 @@ tbody tr { cursor:pointer; }
 .weight-placeholder { margin-top:10px; border:1px dashed #cbd5e1; border-radius:8px; padding:14px; font-size:16px; color:#475569; background:#f8fafc; }
 .weight-placeholder-main { margin:0 0 6px; font-size:20px; color:#0f172a; font-weight:700; }
 .weight-placeholder-note { margin:8px 0 0; font-size:13px; color:#64748b; font-weight:600; }
+.model-logic-card { margin-top:10px; border:1px solid #dbeafe; border-radius:10px; padding:12px; background:#eff6ff; }
+.model-logic-title { margin:0 0 8px; color:#1e3a8a; font-size:13px; font-weight:800; }
+.model-logic-grid { display:grid; grid-template-columns: 1fr auto; gap:6px 10px; align-items:center; }
+.model-logic-grid span { color:#475569; font-size:12px; }
+.model-logic-grid strong { color:#0f172a; font-size:13px; text-align:right; }
+.model-logic-note { margin:8px 0 0; color:#1d4ed8; font-size:12px; font-weight:700; }
 .ml-compare-grid { display:grid; grid-template-columns: 1fr; gap:10px; }
 .ml-headline { display:flex; align-items:center; justify-content:space-between; gap:14px; border:1px solid #e5e7eb; border-radius:10px; background:#fff; padding:10px 12px; }
 .ml-metrics-grid { display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap:8px; }
