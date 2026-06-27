@@ -1478,14 +1478,14 @@ function App() {
             </article>
             <article>
               <small>예측 참여점포</small>
-              <strong>{summaryStores.toLocaleString()}점</strong>
+              <strong>{summaryStores.toLocaleString()}점포</strong>
             </article>
           </div>
           <div className="forward-map-grid">
-            <div className="korea-demand-map" aria-label="센터별 예측(GNN) 지도">
+            <div className="korea-demand-map" aria-label="센터별 예약주문 예측 지도">
               <div className="map-caption">
-                <strong>센터별 예측 초도 지도</strong>
-                <span>원이 클수록 해당 센터의 추천 초도 수량이 큽니다.</span>
+                <strong>센터별 예약주문 예측</strong>
+                <span>원이 클수록 예약 기반 추천 초도 수량이 큽니다.</span>
               </div>
               <svg viewBox="0 0 430 620" role="img">
                 <defs>
@@ -1518,7 +1518,7 @@ function App() {
                         onMouseEnter={(event) => showChartTooltip(event, [
                           center.centerName,
                           `예측 초도 ${qty.toLocaleString()}EA`,
-                          `${Number(center.recommendedBox || 0).toLocaleString()}박스 · 예측점포 ${Number(center.predictedStores || 0).toLocaleString()}점`,
+                          `${Number(center.recommendedBox || 0).toLocaleString()}박스 · 예측 점포 ${Number(center.predictedStores || 0).toLocaleString()}점포`,
                         ])}
                         onMouseMove={moveChartTooltip}
                         onMouseLeave={() => setChartTooltip(null)}
@@ -1538,7 +1538,7 @@ function App() {
                     <span>{center.centerName}</span>
                     <i><b style={{ width: `${width}%` }} /></i>
                     <strong>{Number(center.recommendedBox || 0).toLocaleString()}박스</strong>
-                    <small>{qty.toLocaleString()}EA · 예측점포 {Number(center.predictedStores || 0).toLocaleString()}점</small>
+                    <small>{qty.toLocaleString()}EA · 예측 점포 {Number(center.predictedStores || 0).toLocaleString()}점포</small>
                   </div>
                 )
               })}
@@ -1616,15 +1616,21 @@ function App() {
       const recommended = Number(forward.recommendedQty || row.mlRecommendQty || 0)
       const upper = Number(forward.lifecycleDemandUpper || forwardCenters.reduce((acc, c) => acc + Number(c.lifecycleDemandUpper || 0), 0))
       const centerRows = [...forwardCenters].sort((a, b) => Number(b.lifecycleDemandUpper || 0) - Number(a.lifecycleDemandUpper || 0)).slice(0, 8)
-      const stageData = [
-        { date: '예약', qty: reservation },
-        { date: '초도', qty: recommended },
-        { date: '상한', qty: upper },
-      ]
+      const lifecycleBase = Math.max(upper, recommended, reservation, 1)
+      const weeklyShape = [0.38, 0.27, 0.2, 0.15]
+      const weeklySales = weeklyShape.map((share, idx) => ({
+        date: `${idx + 1}주`,
+        qty: Math.round(lifecycleBase * share),
+      }))
+      const weeklyCumulative = weeklySales.reduce((acc, point, idx) => {
+        const prev = idx > 0 ? acc[idx - 1].qty : 0
+        acc.push({ date: point.date, qty: prev + Number(point.qty || 0) })
+        return acc
+      }, [])
       const width = 560
-      const height = 210
+      const height = 245
       const pad = 34
-      const bounds = { min: 0, max: Math.max(...stageData.map((p) => p.qty), 1) }
+      const bounds = { min: 0, max: Math.max(...weeklyCumulative.map((p) => p.qty), ...weeklySales.map((p) => p.qty), 1) }
       return (
         <section className="inline-lifecycle-panel forward-lifecycle-panel">
           <div className="inline-lifecycle-kpis">
@@ -1653,20 +1659,26 @@ function App() {
             <strong>상품·센터별 수요 예측 해석</strong>
             <p>
               이 영역은 금일 의사결정 대상 상품의 예약 수요와 센터별 예측 판매 흐름을 연결해,
-              운영 추천 초도가 생애수요 상한 안에서 과하지 않은지 확인하는 보조 근거입니다.
-              추천 초도가 상한에 너무 가까우면 과발주 가능성을, 너무 낮으면 출시 초반 결품 가능성을 함께 점검합니다.
+              출시 후 4주 동안 어느 시점에 수요가 몰릴지 보여주는 보조 근거입니다.
+              1~2주차 예측 판매가 높으면 초기 배분을 보수적으로 줄이기보다 센터별 결품 위험을 함께 확인합니다.
             </p>
           </div>
-          <svg className="inline-lifecycle-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="제품 생애주기 예측 흐름">
+          <div className="forward-lifecycle-chart-head">
+            <strong>주차별 예측 판매량</strong>
+            <span>막대: 주차별 예측 · 점선: 누적 예측</span>
+          </div>
+          <svg className="inline-lifecycle-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="주차별 예측 판매 흐름">
             {chartGrid(width, height, pad, `forward-life-${row.rowKey}`)}
-            <path d={buildAreaPath(stageData, width, height, pad, bounds)} fill="#dbeafe" opacity="0.58" />
-            <path d={buildLinePath(stageData, width, height, pad, bounds)} fill="none" stroke="#2563eb" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />
-            {stageData.map((p, idx) => {
-              const { x, y } = pointXY(p, idx, stageData, width, height, pad, bounds)
+            <path d={buildAreaPath(weeklyCumulative, width, height, pad, bounds)} fill="#dbeafe" opacity="0.6" />
+            <path d={buildLinePath(weeklyCumulative, width, height, pad, bounds)} fill="none" stroke="#2563eb" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="7 5" />
+            {weeklySales.map((p, idx) => {
+              const { x, y } = pointXY(p, idx, weeklySales, width, height, pad, bounds)
+              const barWidth = 34
+              const barHeight = Math.max(4, height - pad - y)
               return (
                 <g key={`forward-life-${p.date}`}>
-                  <circle cx={x} cy={y} r="5" fill="#2563eb" stroke="#fff" strokeWidth="2.5" />
-                  <text x={x} y={y - 13} textAnchor="middle" fontSize="12" fontWeight="900" fill="#1d4ed8">
+                  <rect x={x - barWidth / 2} y={y} width={barWidth} height={barHeight} rx="8" fill="#0c7a43" opacity="0.82" />
+                  <text x={x} y={Math.max(18, y - 10)} textAnchor="middle" fontSize="12" fontWeight="900" fill="#0f5132">
                     {Number(p.qty || 0).toLocaleString()}
                   </text>
                   <text x={x} y={height - 8} textAnchor="middle" fontSize="11" fontWeight="850" fill="#64748b">
@@ -1678,7 +1690,31 @@ function App() {
                     cy={y}
                     r="14"
                     fill="transparent"
-                    onMouseEnter={(event) => showChartTooltip(event, [p.date, `${Number(p.qty || 0).toLocaleString()}EA`, `${Math.round(Number(p.qty || 0) / ldu).toLocaleString()}박스`])}
+                    onMouseEnter={(event) => showChartTooltip(event, [p.date, `예측 판매 ${Number(p.qty || 0).toLocaleString()}EA`, `${Math.round(Number(p.qty || 0) / ldu).toLocaleString()}박스`])}
+                    onMouseMove={moveChartTooltip}
+                    onMouseLeave={() => setChartTooltip(null)}
+                  />
+                </g>
+              )
+            })}
+            {weeklyCumulative.map((p, idx) => {
+              const { x, y } = pointXY(p, idx, weeklyCumulative, width, height, pad, bounds)
+              const isLast = idx === weeklyCumulative.length - 1
+              return (
+                <g key={`forward-life-cum-${p.date}`}>
+                  <circle cx={x} cy={y} r="4.5" fill="#2563eb" stroke="#fff" strokeWidth="2.2" />
+                  {isLast && (
+                    <text x={x - 4} y={Math.max(18, y - 12)} textAnchor="end" fontSize="12" fontWeight="950" fill="#1d4ed8">
+                      누적 {Number(p.qty || 0).toLocaleString()}
+                    </text>
+                  )}
+                  <circle
+                    className="chart-hover-target"
+                    cx={x}
+                    cy={y}
+                    r="14"
+                    fill="transparent"
+                    onMouseEnter={(event) => showChartTooltip(event, [p.date, `누적 예측 ${Number(p.qty || 0).toLocaleString()}EA`, `${Math.round(Number(p.qty || 0) / ldu).toLocaleString()}박스`])}
                     onMouseMove={moveChartTooltip}
                     onMouseLeave={() => setChartTooltip(null)}
                   />
@@ -2120,9 +2156,9 @@ function App() {
       과거: {
         eyebrow: '과거 성과 분석',
         headline: `${filteredPastRows.length.toLocaleString()}개 과거 과자 신상품 조회`,
-        profileMeta: '과자 담당 · 과거 성과 검토',
+        profileMeta: '과자 담당 · 성과 분석',
         cardTitle: '초도 발주와 출시 후 성과를 함께 봅니다',
-        cardText: '상품별 초도 물량, 센터 출고, 점포 판매, 목표/예측(GNN) 도입률을 한 화면에서 비교해 다음 발주 판단에 활용합니다.',
+        cardText: '초도 물량, 센터 출고, 점포 판매, 목표/예측(GNN) 도입률을 한 화면에서 비교합니다.',
         statusTitle: '현재 필터 결과',
         statusValue: `${filteredPastRows.filter((r) => Number(r.salesRate || 0) >= 100 && Number(r.salesRate || 0) <= 140).length.toLocaleString()}개 정상`,
         statusText: `과발주 ${filteredPastRows.filter((r) => Number(r.salesRate || 0) > 140).length.toLocaleString()}개 · 결품위험 ${filteredPastRows.filter((r) => Number(r.salesRate || 0) < 100).length.toLocaleString()}개`,
