@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MD 신상품 초도발주 대시보드 사용 가이드</title>
+    <style>
+      :root {
+        --green: #0c7a43;
+        --green-soft: #e8f8ef;
+        --ink: #111827;
+        --muted: #64748b;
+        --line: #dfe5ec;
+        --panel: #ffffff;
+        --bg: #f4f7f8;
+        --amber: #d97706;
+        --red: #b91c1c;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+        line-height: 1.65;
+      }
+
+      .shell {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 42px 24px 64px;
+      }
+
+      .hero {
+        border: 1px solid #b7e4c8;
+        background: linear-gradient(135deg, #ffffff 0%, #f2fff7 100%);
+        border-radius: 24px;
+        padding: 34px 36px;
+        box-shadow: 0 18px 60px rgba(15, 23, 42, 0.06);
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--green);
+        font-size: 14px;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(30px, 4vw, 48px);
+        line-height: 1.18;
+        letter-spacing: 0;
+      }
+
+      .hero p {
+        max-width: 780px;
+        margin: 18px 0 0;
+        color: #334155;
+        font-size: 18px;
+        font-weight: 650;
+      }
+
+      .quick {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .quick-card {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.82);
+        border-radius: 16px;
+        padding: 16px 18px;
+      }
+
+      .quick-card span {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .quick-card strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+
+      .section {
+        margin-top: 24px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 20px;
+        padding: 26px 28px;
+      }
+
+      .section h2 {
+        margin: 0 0 14px;
+        font-size: 24px;
+        line-height: 1.25;
+      }
+
+      .section h3 {
+        margin: 24px 0 8px;
+        font-size: 18px;
+      }
+
+      .section p {
+        margin: 8px 0;
+        color: #334155;
+        font-weight: 600;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .step {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 18px;
+        background: #fbfcfd;
+      }
+
+      .step b {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        margin-right: 8px;
+        border-radius: 999px;
+        background: var(--green);
+        color: white;
+        font-size: 14px;
+      }
+
+      .step strong {
+        font-size: 17px;
+      }
+
+      .step p {
+        margin-top: 10px;
+        color: #475569;
+      }
+
+      .rules {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .rule {
+        border-radius: 16px;
+        padding: 16px;
+        font-weight: 800;
+      }
+
+      .rule.low { border: 1px solid #fed7aa; background: #fff7ed; color: #9a3412; }
+      .rule.ok { border: 1px solid #bbf7d0; background: #f0fdf4; color: #166534; }
+      .rule.high { border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; }
+
+      .rule span {
+        display: block;
+        margin-top: 6px;
+        color: #475569;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      li {
+        margin: 8px 0;
+        color: #334155;
+        font-weight: 600;
+      }
+
+      .callout {
+        margin-top: 16px;
+        border-left: 5px solid var(--green);
+        background: var(--green-soft);
+        border-radius: 14px;
+        padding: 16px 18px;
+        color: #14532d;
+        font-weight: 800;
+      }
+
+      .two-column {
+        columns: 2;
+        column-gap: 36px;
+      }
+
+      .footer {
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+
+      @media (max-width: 820px) {
+        .shell { padding: 20px 14px 44px; }
+        .hero, .section { padding: 22px 18px; border-radius: 18px; }
+        .quick, .grid, .rules { grid-template-columns: 1fr; }
+        .two-column { columns: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">7-ELEVEN MD DASHBOARD GUIDE</p>
+        <h1>MD 신상품 초도발주 대시보드 사용 가이드</h1>
+        <p>
+          이 대시보드는 과자 신상품의 초도발주 의사결정을 돕기 위한 작업 화면입니다.
+          예약주문 흐름, 모델 추천량, 유사상품 사례, 센터 배분, 과거 성과를 한 번에 확인해
+          MD가 발주량을 검토하고 확정할 수 있도록 구성했습니다.
+        </p>
+        <div class="quick">
+          <div class="quick-card">
+            <span>의사결정 기준일</span>
+            <strong>출시 5일 전</strong>
+          </div>
+          <div class="quick-card">
+            <span>입력 단위</span>
+            <strong>박스, EA 환산 병기</strong>
+          </div>
+          <div class="quick-card">
+            <span>판정 기준</span>
+            <strong>적정 출고량 대비</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>1. 대시보드가 답하려는 질문</h2>
+        <p>
+          핵심 질문은 단순합니다. “이 신상품을 지금 몇 박스 발주해야 출시 초기에 결품을 피하면서도
+          과도한 재고를 만들지 않을 수 있는가?”입니다.
+        </p>
+        <p>
+          그래서 대시보드는 모델 추천량을 바로 확정하라는 화면이 아니라, MD가 추천량의 근거를
+          빠르게 확인하고 필요하면 박스 단위로 조정할 수 있게 만든 검토 도구입니다.
+        </p>
+        <div class="callout">
+          모델 추천량은 의사결정의 출발점이고, 최종 발주량은 MD의 상품 이해와 운영 판단을 반영해 확정합니다.
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>2. 공통 판정 기준</h2>
+        <div class="rules">
+          <div class="rule low">
+            결품위험
+            <span>입력 발주량이 적정 출고량의 1배 미만입니다. 출시 초기에 물량 부족 가능성이 있습니다.</span>
+          </div>
+          <div class="rule ok">
+            정상발주
+            <span>입력 발주량이 적정 출고량의 1.0~1.4배 범위입니다. 현재 기준에서 가장 안정적인 구간입니다.</span>
+          </div>
+          <div class="rule high">
+            과발주
+            <span>입력 발주량이 적정 출고량의 1.4배를 초과합니다. 초기 재고 부담 가능성을 확인해야 합니다.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>3. 금일 신상품 작업 탭</h2>
+        <div class="grid">
+          <div class="step">
+            <strong><b>1</b>현재 날짜를 선택합니다</strong>
+            <p>선택한 날짜 기준으로 출시 5일 전 의사결정 대상 상품이 조회됩니다. 조회되지 않으면 날짜가 대상 구간과 맞지 않을 가능성이 큽니다.</p>
+          </div>
+          <div class="step">
+            <strong><b>2</b>작업 큐와 상품 행을 확인합니다</strong>
+            <p>상품 코드, 상품명, 카테고리, 판매가, 목표도입률, 발주 적정도, 권장 발주량을 먼저 봅니다.</p>
+          </div>
+          <div class="step">
+            <strong><b>3</b>상품을 클릭해 근거를 봅니다</strong>
+            <p>예약주문 추세, 권장 발주량 판단 근거, 센터별 분배량, 유사상품 과거 사례가 상품 바로 아래에 펼쳐집니다.</p>
+          </div>
+          <div class="step">
+            <strong><b>4</b>박스 단위로 발주량을 조정합니다</strong>
+            <p>입력값은 박스 기준입니다. 화면에는 EA 환산 수량이 함께 표시되어 물류 단위와 실제 수량을 동시에 확인할 수 있습니다.</p>
+          </div>
+          <div class="step">
+            <strong><b>5</b>센터별 분배를 검토합니다</strong>
+            <p>센터별 추천 배분량과 입력 배분량을 비교합니다. 특정 센터가 결품위험 또는 과발주로 표시되면 해당 센터 물량을 우선 점검합니다.</p>
+          </div>
+          <div class="step">
+            <strong><b>6</b>발주 확정 버튼으로 마무리합니다</strong>
+            <p>발주 수량과 센터 분배가 적정하다고 판단되면 행 오른쪽의 발주 확정을 눌러 작업 완료 상태로 넘깁니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>4. 과거 신상품 조회 탭</h2>
+        <p>
+          과거 신상품 조회는 “비슷한 상품이 실제로 어떻게 흘러갔는가?”를 확인하는 탭입니다.
+          현재 상품의 권장량을 판단할 때 과거 사례를 근거로 삼을 수 있습니다.
+        </p>
+        <ul class="two-column">
+          <li>날짜, 대분류, 중분류, 소분류, 검색 조건으로 과거 상품을 좁힙니다.</li>
+          <li>과거 발주량은 박스 기준으로 보고, EA 환산 수량을 함께 확인합니다.</li>
+          <li>출고율은 초도물량 중 점포로 출고된 비율입니다.</li>
+          <li>소화율은 초도물량 중 실제 점포 판매로 소화된 비율입니다.</li>
+          <li>상품 행을 클릭하면 예약주문, 출시 후 출고, 판매 누적 흐름을 봅니다.</li>
+          <li>ML 추천량과 실제 초도 발주량 차이를 통해 모델이 과소 또는 과대 추천했는지 확인합니다.</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>5. 모델 성과 요약 탭</h2>
+        <p>
+          모델 성과 요약은 개별 상품이 아니라 전체 운영 관점에서 모델이 얼마나 안정적으로 작동하는지 보는 화면입니다.
+          정상발주 비중, 과발주/결품위험 사례, 카테고리별 차이를 확인해 다음 모델 개선과 MD 운영 기준을 점검합니다.
+        </p>
+      </section>
+
+      <section class="section">
+        <h2>6. MD가 자주 확인해야 할 포인트</h2>
+        <h3>권장 발주량이 크거나 작아 보일 때</h3>
+        <p>예약주문 총량, 초기 몰림 정도, 유사상품 평균 발주, 유사상품 발주 적정성을 함께 봅니다. 하나의 숫자만 보고 판단하지 않는 것이 좋습니다.</p>
+        <h3>센터별 차이가 크게 보일 때</h3>
+        <p>센터별 점포 비중, 가중치, 입력 수량, 결품/과발주 표시를 같이 확인합니다. 특정 센터만 과하게 튀면 센터 물량을 조정할 수 있습니다.</p>
+        <h3>AI 판단문을 볼 때</h3>
+        <p>AI 판단문은 모델 지표를 MD 언어로 풀어쓴 보조 설명입니다. 최종 확정 근거라기보다는 검토 순서를 빠르게 잡아주는 참고 자료로 보는 것이 좋습니다.</p>
+      </section>
+
+      <p class="footer">
+        이 가이드는 MD 신상품 초도발주 대시보드의 화면 구조와 판단 흐름을 설명하기 위한 문서입니다.
+      </p>
+    </main>
+  </body>
+</html>
