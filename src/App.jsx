@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 const AI_REVIEW_TITLE = 'Gemini Flash 2.5 기반 검토 의견'
 const AI_REVIEW_MODEL_LABEL = '자동 설명'
 const FIXED_DECISION_DATE = '2025-12-26'
+const LOGIN_ACCESS_CODE = '711'
 const KAKAO_MAP_APP_KEY = '7f46dd8b78fb75f5163914d739b542e7'
 
 const CENTER_COORDS = {
@@ -82,7 +83,7 @@ const centerCoordinate = (center) => {
 
 const parseLoginIdentity = (value) => {
   const cleaned = String(value || '').replace(/\s+/g, ' ').trim()
-  if (!cleaned) return { name: '정은기', role: 'MD' }
+  if (!cleaned) return { name: '담당자', role: 'MD' }
   const titles = ['대표이사', 'Operator', '오퍼레이터', '교수', '학생', '상무', '책임', '수석', '대리', '프로', 'MD']
   const parts = cleaned.split(' ')
   if (parts.length >= 2 && titles.includes(parts[0])) {
@@ -387,15 +388,17 @@ function App() {
   const [chartTooltip, setChartTooltip] = useState(null)
   const [decisionNoteMap, setDecisionNoteMap] = useState({})
   const [similarExpandedMap, setSimilarExpandedMap] = useState({})
+  const [reservationCenterMap, setReservationCenterMap] = useState({})
   const [calculatorOpen, setCalculatorOpen] = useState(false)
   const [calcBox, setCalcBox] = useState('100')
   const [calcLdu, setCalcLdu] = useState('20')
   const [calcRecommendedBox, setCalcRecommendedBox] = useState('100')
   const [calcTargetEa, setCalcTargetEa] = useState('2000')
   const [isLoggedIn, setIsLoggedIn] = useState(() => window.sessionStorage.getItem('sevenMdLoggedIn') === '1')
-  const [loginId, setLoginId] = useState(() => window.sessionStorage.getItem('sevenMdLoginInput') || '정은기')
-  const [mdProfile, setMdProfile] = useState(() => parseLoginIdentity(window.sessionStorage.getItem('sevenMdLoginInput') || '정은기'))
+  const [loginId, setLoginId] = useState(() => window.sessionStorage.getItem('sevenMdLoginInput') || '')
+  const [mdProfile, setMdProfile] = useState(() => parseLoginIdentity(window.sessionStorage.getItem('sevenMdLoginInput') || ''))
   const [loginPassword, setLoginPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
   const mdDisplayName = `${mdProfile.name} ${mdProfile.role}님`
 
   useEffect(() => {
@@ -995,7 +998,7 @@ function App() {
         </head>
         <body>
           <h2>센터별 발주 배분 수량</h2>
-          <p>기준일: ${excelEscape(selectedBaseDate || currentDate || '')} / 상품 수: ${exportedItemCount.toLocaleString()}개 / 기준: ${confirmedRows.length ? '확정 완료 상품' : '현재 조회 상품 전체'}</p>
+          <p>현재 날짜: ${excelEscape(selectedBaseDate || currentDate || '')} / 상품 수: ${exportedItemCount.toLocaleString()}개 / 기준: ${confirmedRows.length ? '확정 완료 상품' : '현재 조회 상품 전체'}</p>
           <table>
             <thead>
               <tr>
@@ -1479,7 +1482,11 @@ function App() {
             </article>
           </div>
           <div className="forward-map-grid">
-            <div className="korea-demand-map" aria-label="센터별 GNN 예측 지도">
+            <div className="korea-demand-map" aria-label="센터별 예측(GNN) 지도">
+              <div className="map-caption">
+                <strong>센터별 예측 초도 지도</strong>
+                <span>원이 클수록 해당 센터의 추천 초도 수량이 큽니다.</span>
+              </div>
               <svg viewBox="0 0 430 620" role="img">
                 <defs>
                   <filter id={`mapShadow-${row.rowKey}`} x="-20%" y="-20%" width="140%" height="140%">
@@ -1642,6 +1649,14 @@ function App() {
               <span>초도 과부족 점검</span>
             </article>
           </div>
+          <div className="lifecycle-explain-card">
+            <strong>상품·센터별 수요 예측 해석</strong>
+            <p>
+              이 영역은 금일 의사결정 대상 상품의 예약 수요와 센터별 예측 판매 흐름을 연결해,
+              운영 추천 초도가 생애수요 상한 안에서 과하지 않은지 확인하는 보조 근거입니다.
+              추천 초도가 상한에 너무 가까우면 과발주 가능성을, 너무 낮으면 출시 초반 결품 가능성을 함께 점검합니다.
+            </p>
+          </div>
           <svg className="inline-lifecycle-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="제품 생애주기 예측 흐름">
             {chartGrid(width, height, pad, `forward-life-${row.rowKey}`)}
             <path d={buildAreaPath(stageData, width, height, pad, bounds)} fill="#dbeafe" opacity="0.58" />
@@ -1720,6 +1735,13 @@ function App() {
             <strong>{Math.round(Number(item.predictionRatio || 0) * 100)}%</strong>
           </article>
         </div>
+        <div className="lifecycle-explain-card">
+          <strong>상품·센터별 생애주기 비교</strong>
+          <p>
+            예측 판매와 실제 판매 흐름을 같은 주차 기준으로 비교합니다. 실제 판매가 예측보다 빠르게 올라오면 추가 발주나 센터 보강을,
+            느리면 다음 유사상품 발주 시 초도 수량을 낮추는 근거로 활용할 수 있습니다.
+          </p>
+        </div>
         <svg className="inline-lifecycle-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="제품 생애주기 예측과 실제">
           {chartGrid(width, height, pad, `inline-life-${row.rowKey}`)}
           <path d={buildAreaPath(predicted, width, height, pad, bounds)} fill="#dbeafe" opacity="0.58" />
@@ -1774,9 +1796,46 @@ function App() {
   }
   const renderDrawerReservationTrend = (row) => {
     const detail = data?.itemDetails?.[row.rowKey] || {}
-    const reservation = (detail.reservationPreRelease || detail.reservation4d || [])
+    const baseReservation = (detail.reservationPreRelease || detail.reservation4d || [])
       .map((p) => ({ date: p.date, qty: Number(p.qty || 0) }))
-    if (!reservation.length) return null
+    if (!baseReservation.length) return null
+    const baseCumulative = baseReservation.reduce((acc, p, idx) => {
+      const prev = idx > 0 ? acc[idx - 1].qty : 0
+      acc.push({ date: p.date, qty: prev + Number(p.qty || 0) })
+      return acc
+    }, [])
+    const baseTotal = baseCumulative[baseCumulative.length - 1]?.qty || 0
+    const forwardCenters = Array.isArray(detail.forwardPrediction?.centers) ? detail.forwardPrediction.centers : []
+    const centerDistribution = Array.isArray(detail.centerDistribution) ? detail.centerDistribution : []
+    const centerSource = forwardCenters.length
+      ? forwardCenters
+      : centerDistribution.map((center) => ({
+        centerCode: center.centerCode,
+        centerName: center.centerName,
+        reservationQty: center.qty,
+        recommendedBox: Math.round(Number(center.qty || 0) / Math.max(boxUnitEa(row), 1)),
+      }))
+    const centerDenominator = Math.max(
+      centerSource.reduce((sum, center) => sum + Number(center.reservationQty || 0), 0),
+      1,
+    )
+    const centerOptions = [
+      { key: 'all', label: '전체', share: 1, reservationQty: baseTotal },
+      ...centerSource.map((center) => {
+        const reservationQty = Number(center.reservationQty || 0)
+        return {
+          key: String(center.centerCode || center.centerName),
+          label: center.centerName,
+          share: reservationQty / centerDenominator,
+          reservationQty,
+        }
+      }),
+    ]
+    const selectedCenterKey = reservationCenterMap[row.rowKey] || 'all'
+    const selectedCenter = centerOptions.find((option) => option.key === selectedCenterKey) || centerOptions[0]
+    const reservation = selectedCenter.key === 'all'
+      ? baseReservation
+      : baseReservation.map((p) => ({ ...p, qty: Math.round(Number(p.qty || 0) * selectedCenter.share) }))
     const reservationCumulative = reservation.reduce((acc, p, idx) => {
       const prev = idx > 0 ? acc[idx - 1].qty : 0
       acc.push({ date: p.date, qty: prev + Number(p.qty || 0) })
@@ -1794,15 +1853,42 @@ function App() {
     const height = 220
     const pad = 34
     const dateRangeLabel = `${formatMd(reservation[0].date)} ~ ${formatMd(reservation[reservation.length - 1].date)}`
+    const reservationTotal = reservationCumulative[reservationCumulative.length - 1]?.qty || 0
+    const initial4Qty = reservation.slice(0, 4).reduce((sum, p) => sum + Number(p.qty || 0), 0)
+    const frontloadRatio = reservationTotal > 0 ? (initial4Qty / reservationTotal) * 100 : 0
+    const peakPoint = reservation.reduce((max, p) => (Number(p.qty || 0) > Number(max.qty || 0) ? p : max), reservation[0])
+    const recommendedEa = Number(row.mlRecommendQty || 0)
+    const recommendedBox = mlRecommendBox(row)
     return (
       <div className="drawer-trend-card">
         <div className="current-chart-head">
           <h3>예약주문 추세선</h3>
           <span>{dateRangeLabel}</span>
         </div>
+        {centerOptions.length > 1 && (
+          <div className="reservation-center-filter">
+            <span>조회 기준</span>
+            <div>
+              {centerOptions.map((option) => (
+                <button
+                  type="button"
+                  key={`${row.rowKey}-reservation-${option.key}`}
+                  className={selectedCenter.key === option.key ? 'active' : ''}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setReservationCenterMap((prev) => ({ ...prev, [row.rowKey]: option.key }))
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="current-trend-panel drawer-trend-panel">
           <div className="current-trend-subhead">
             <strong>실선: 일자별 예약주문 · 점선: 누적 예약주문</strong>
+            <span>{selectedCenter.key === 'all' ? '전체 기준' : `${selectedCenter.label} 추정 기준`}</span>
           </div>
           <svg className="trend-line current-overlay-trend drawer-overlay-trend" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="예약주문 일자별 및 누적 추세">
             {chartGrid(width, height, pad, `drawer-${row.rowKey}`)}
@@ -1822,7 +1908,7 @@ function App() {
                     cy={y}
                     r="12"
                     fill="transparent"
-                    onMouseEnter={(event) => showChartTooltip(event, [p.date, `누적 예약주문 ${Number(p.qty || 0).toLocaleString()}EA`])}
+                    onMouseEnter={(event) => showChartTooltip(event, [p.date, `${selectedCenter.label} 누적 예약주문 ${Number(p.qty || 0).toLocaleString()}EA`])}
                     onMouseMove={moveChartTooltip}
                     onMouseLeave={() => setChartTooltip(null)}
                   />
@@ -1852,7 +1938,7 @@ function App() {
                     cy={y}
                     r="14"
                     fill="transparent"
-                    onMouseEnter={(event) => showChartTooltip(event, [p.date, `일자별 예약주문 ${Number(p.qty || 0).toLocaleString()}EA`])}
+                    onMouseEnter={(event) => showChartTooltip(event, [p.date, `${selectedCenter.label} 일자별 예약주문 ${Number(p.qty || 0).toLocaleString()}EA`])}
                     onMouseMove={moveChartTooltip}
                     onMouseLeave={() => setChartTooltip(null)}
                   />
@@ -1867,6 +1953,33 @@ function App() {
             })}
           </svg>
         </div>
+        <div className="reservation-insight-cards">
+          <article>
+            <small>{selectedCenter.key === 'all' ? '누적 예약' : '센터 추정 예약'}</small>
+            <strong>{reservationTotal.toLocaleString()}EA</strong>
+            <span>{selectedCenter.key === 'all' ? '출시 전 확인된 총 수요' : `${selectedCenter.label} 배분 비중 기준`}</span>
+          </article>
+          <article>
+            <small>초기 4일 집중</small>
+            <strong>{initial4Qty.toLocaleString()}EA</strong>
+            <span>초기 비중 {frontloadRatio.toFixed(1)}%</span>
+          </article>
+          <article>
+            <small>피크 일자</small>
+            <strong>{formatMd(peakPoint.date)}</strong>
+            <span>{Number(peakPoint.qty || 0).toLocaleString()}EA 예약</span>
+          </article>
+          <article>
+            <small>운영 추천</small>
+            <strong>{recommendedBox.toLocaleString()}박스</strong>
+            <span>EA {recommendedEa.toLocaleString()}</span>
+          </article>
+        </div>
+        {selectedCenter.key !== 'all' && (
+          <p className="reservation-context-note">
+            센터별 예약추세는 전체 예약 곡선을 센터별 예약/배분 비중으로 환산한 추정값입니다. 실제 확정 전에는 우측 센터별 분배 수량과 함께 확인하세요.
+          </p>
+        )}
       </div>
     )
   }
@@ -1966,16 +2079,21 @@ function App() {
 
   const handleLogin = (event) => {
     event.preventDefault()
+    if (loginPassword.trim() !== LOGIN_ACCESS_CODE) {
+      setLoginError('접속 코드를 다시 확인해 주세요. 데모 접속 코드는 711입니다.')
+      return
+    }
     const nextProfile = parseLoginIdentity(loginId)
     setMdProfile(nextProfile)
     window.sessionStorage.setItem('sevenMdLoggedIn', '1')
-    window.sessionStorage.setItem('sevenMdLoginInput', loginId.trim() || '정은기')
+    window.sessionStorage.setItem('sevenMdLoginInput', loginId.trim() || '담당자 MD')
+    setLoginError('')
     setIsLoggedIn(true)
   }
 
   const renderDashboardHero = () => {
     const remaining = Math.max(weeklyQueue.total - confirmedCount, 0)
-    const decisionDateLabel = FIXED_DECISION_DATE.replace(/-/g, '.')
+    const currentDateLabel = FIXED_DECISION_DATE.replace(/-/g, '.')
     const hero = {
       '금주+MD': {
         eyebrow: '오늘 확인할 작업',
@@ -1983,8 +2101,8 @@ function App() {
         profileMeta: '과자 담당 · 출시 5일 전 의사결정',
         cardTitle: weeklyQueue.total === 0 ? '오늘은 작업할 신상품이 없습니다' : '오늘 발주 확정이 필요합니다',
         cardText: weeklyQueue.total === 0
-          ? '기준일에 출시 5일 전 의사결정 대상 상품이 없습니다. 과거 신상품 조회에서 참고 사례를 확인할 수 있습니다.'
-          : `센터 입고와 점포 전개 일정을 맞추려면 기준일 ${decisionDateLabel}에 ${weeklyQueue.total}개 상품의 초도 발주량을 확정해야 합니다.`,
+          ? '현재 날짜에는 출시 5일 전 의사결정 대상 상품이 없습니다. 과거 신상품 조회에서 참고 사례를 확인할 수 있습니다.'
+          : `센터 입고와 점포 전개 일정을 맞추려면 현재 날짜 ${currentDateLabel}에 ${weeklyQueue.total}개 상품의 초도 발주량을 확정해야 합니다.`,
         statusTitle: '발주 확정 현황',
         statusValue: `${confirmedCount}/${weeklyQueue.total} 완료`,
         statusText: weeklyQueue.total === 0 ? '저장할 센터 배분 없음' : `${remaining}건 남음 · 확정 후 센터별 배분 저장 가능`,
@@ -2038,7 +2156,7 @@ function App() {
           <div>
             <div className="profile-eyebrow-row">
               <span>좋은 오후입니다</span>
-              <b>기준일 {decisionDateLabel}</b>
+              <b>현재 날짜 {currentDateLabel}</b>
             </div>
             <strong>{mdDisplayName}</strong>
             <p>{hero.profileMeta}</p>
@@ -2096,26 +2214,37 @@ function App() {
           <div className="login-copy">
             {renderMdAvatar()}
             <div>
-              <span>과자 담당</span>
-              <strong>{`${parseLoginIdentity(loginId).name} ${parseLoginIdentity(loginId).role}님, 오늘의 발주 의사결정을 시작합니다.`}</strong>
-              <p>기준일 2025.12.26 · 출시 5일 전 확정 대상 상품의 예약 수요, 모델 추천량, 센터 배분을 한 화면에서 확인합니다.</p>
+              <span>MD 업무 포털</span>
+              <strong>신상품 초도발주 의사결정을 시작합니다.</strong>
+              <p>이름과 직책을 입력하면 담당자명으로 대시보드가 표시됩니다. 현재 날짜 2025.12.26 기준의 예약 수요, 모델 추천량, 센터 배분을 확인합니다.</p>
             </div>
           </div>
           <form className="login-form" onSubmit={handleLogin}>
             <label>
               <span>MD 이름</span>
-              <input value={loginId} onChange={(event) => setLoginId(event.target.value)} placeholder="정은기 또는 김대일 대표이사" />
+              <input
+                value={loginId}
+                onChange={(event) => {
+                  setLoginId(event.target.value)
+                  setLoginError('')
+                }}
+                placeholder="예: 홍길동 MD, 김담당 책임"
+              />
             </label>
             <label>
               <span>접속 코드</span>
               <input
                 type="password"
                 value={loginPassword}
-                onChange={(event) => setLoginPassword(event.target.value)}
-                placeholder="데모 화면은 입력 후 바로 진입"
+                onChange={(event) => {
+                  setLoginPassword(event.target.value)
+                  setLoginError('')
+                }}
+                placeholder="711"
               />
             </label>
             <button type="submit">대시보드 들어가기</button>
+            {loginError && <p className="login-error">{loginError}</p>}
           </form>
         </section>
       </div>
@@ -2258,7 +2387,7 @@ function App() {
             <section className="table-wrap">
               {weeklyRows.length === 0 && (
                 <div className="empty-note">
-                  기준일 2025-12-26에는 오늘 확정할 신상품이 없습니다. 과거 신상품 조회에서 참고 사례를 확인할 수 있습니다.
+                  현재 날짜 2025-12-26에는 오늘 확정할 신상품이 없습니다. 과거 신상품 조회에서 참고 사례를 확인할 수 있습니다.
                 </div>
               )}
               <table>
@@ -3403,6 +3532,9 @@ function App() {
                           </article>
                           <article className="viz-card">
                             <h3>ML 기반 예측 비교</h3>
+                            <p className="ml-compare-note">
+                              운영 추천량, 실제 초도, 보정 전 모델값을 박스 단위로 비교합니다. 정상 범주는 출시 후 실제 출고량 기준 1.0~1.4배입니다.
+                            </p>
                             <div className="ml-compare-grid">
                               <div className="ml-headline">
                                 <p className="ml-line">
