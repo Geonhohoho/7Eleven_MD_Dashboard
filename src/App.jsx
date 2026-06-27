@@ -2601,8 +2601,7 @@ function App() {
                                                   updateCenterBoxQty(r, centers, c.centerName, next)
                                                 }}
                                               />
-                                              <small>{Number(c.qty || 0).toLocaleString()}박스 / EA {Math.round(Number(c.qty || 0) * ldu).toLocaleString()}</small>
-                                              <small>권장 발주량 {baseCenterBox.toLocaleString()}박스</small>
+                                              <small>EA {Math.round(Number(c.qty || 0) * ldu).toLocaleString()} · 권장 {baseCenterBox.toLocaleString()}박스</small>
                                               {tone === 'high' && <small className="center-warn high">과발주 주의</small>}
                                               {tone === 'low' && <small className="center-warn low">결품 주의</small>}
                                               {tone === 'ok' && <small className="center-warn ok">정상범위</small>}

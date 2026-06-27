@@ -30,6 +30,24 @@ FINAL_MODEL_PREDICTION_CANDIDATES = [
 ]
 FINAL_MODEL_ALPHA_RECOMMENDED = 1.15
 SALES_DEPLETION_HORIZON_DAYS = 4
+TODAY_DECISION_DATE = "2025-12-26"
+STANDARD_CENTER_NAMES = {
+    "20006": "성남센터",
+    "20007": "대구센터",
+    "20010": "양주센터",
+    "20017": "울산상온센터(K7)",
+    "20033": "제주상온센터",
+    "20034": "구성상온센터",
+    "20050": "세종상온센터",
+    "20065": "원주상온센터(K7)",
+    "20075": "인천상온센터",
+    "20079": "A광주상온센터",
+    "20080": "A의왕상온센터",
+    "20081": "A양산상온센터",
+    "20083": "김제상온센터",
+    "20084": "천안상온센터",
+    "20085": "인천B상온센터",
+}
 FINAL_MODEL_BASELINE_CSV = Path(
     "/Users/geonhokim/Desktop/세븐일레븐 내부데이터/대시보드 작업/최종 모델 예정/baseline_dataset.csv"
 )
@@ -975,7 +993,7 @@ def main() -> None:
     center_stock_map = load_center_stock_map()
     grouped: dict[tuple[str, str], dict] = {}
     row_centers: dict[tuple[str, str], set[str]] = defaultdict(set)
-    center_name_by_code: dict[str, str] = {}
+    center_name_by_code: dict[str, str] = dict(STANDARD_CENTER_NAMES)
     categories = set()
     categories_mid = set()
     categories_sub = set()
@@ -1243,7 +1261,9 @@ def main() -> None:
 
     rows.sort(key=lambda x: (x["releaseDate"], x["recommendQty"]), reverse=True)
     row_map = {r["rowKey"]: r for r in rows}
-    weekly_rows = [r for r in rows if r["releaseDate"] == format_date(latest_ymd)]
+    weekly_rows = [r for r in rows if r.get("decisionDate") == TODAY_DECISION_DATE]
+    if not weekly_rows:
+        weekly_rows = [r for r in rows if r["releaseDate"] == format_date(latest_ymd)]
     weekly_rows.sort(key=lambda x: x["recommendQty"], reverse=True)
     weekly_rows = weekly_rows[:80]
 
@@ -1342,7 +1362,9 @@ def main() -> None:
         if detail["reservation4d"]["0"] >= 0
     }
     rows = [r for r in rows if r["rowKey"] in valid_row_keys]
-    weekly_rows = [r for r in rows if r["releaseDate"] == format_date(latest_ymd)]
+    weekly_rows = [r for r in rows if r.get("decisionDate") == TODAY_DECISION_DATE]
+    if not weekly_rows:
+        weekly_rows = [r for r in rows if r["releaseDate"] == format_date(latest_ymd)]
     store_sales_map, center_store_sales_map, store_sales_sources = load_store_sales_map(build_needed_sales_pairs(rows))
     for r in rows:
         sales_timeline = compute_post_release_sales_series(
@@ -1383,8 +1405,10 @@ def main() -> None:
         item_code = row_key.split("_", 1)[0]
         row_info = row_map.get(row_key, {})
         rel_ymd = normalize_ymd_key(str(row_info.get("releaseDate", "")).replace("-", ""))
-        mapped_center_codes = set(row_centers.get((item_code, rel_ymd), set()))
-        mapped_center_codes.update(center_codes_for_item(center_stock_map, item_code))
+        mapped_center_codes = set(center_weight_map.keys())
+        if not mapped_center_codes:
+            mapped_center_codes.update(row_centers.get((item_code, rel_ymd), set()))
+            mapped_center_codes.update(center_codes_for_item(center_stock_map, item_code))
         mapped_center_codes = sorted(mapped_center_codes)
         center_initial_from_stock: list[dict] = []
         for cc in mapped_center_codes:
@@ -1642,7 +1666,8 @@ def main() -> None:
             ],
         }
 
-    past_rows = [r for r in rows if r["releaseDate"] != format_date(latest_ymd)]
+    weekly_row_keys = {r["rowKey"] for r in weekly_rows}
+    past_rows = [r for r in rows if r["rowKey"] not in weekly_row_keys]
     past_rows.sort(key=lambda x: (x["releaseDate"], x["recommendQty"]), reverse=True)
     past_rows = [
         {
@@ -1683,6 +1708,7 @@ def main() -> None:
     payload = {
         "generatedAt": datetime.now().isoformat(),
         "latestReleaseDate": format_date(latest_ymd),
+        "decisionDate": TODAY_DECISION_DATE,
         "releaseDates": release_dates,
         "kpis": {
             "newItemCount": len({r["itemCode"] for r in weekly_rows}),
