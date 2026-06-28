@@ -1502,6 +1502,8 @@ function App() {
               <div className="forward-top-centers">
                 {topCenters.map((center, idx) => {
                   const qty = Number(center.recommendedQty || 0)
+                  const boxQty = Number(center.recommendedBox || 0)
+                  const predictedStores = Number(center.predictedStores || 0)
                   const width = Math.max(qty > 0 ? 5 : 0, Math.min(100, (qty / maxQty) * 100))
                   return (
                     <div
@@ -1509,16 +1511,19 @@ function App() {
                       key={`${row.rowKey}-top-network-${center.centerName}`}
                       onMouseEnter={(event) => showChartTooltip(event, [
                         `${idx + 1}순위 · ${center.centerName}`,
-                        `${Number(center.recommendedBox || 0).toLocaleString()}박스`,
-                        `${qty.toLocaleString()}EA · 예측 점포 ${Number(center.predictedStores || 0).toLocaleString()}점포`,
+                        `${boxQty.toLocaleString()}박스`,
+                        `${qty.toLocaleString()}EA · 예측 점포 ${predictedStores.toLocaleString()}점포`,
                       ])}
                       onMouseMove={moveChartTooltip}
                       onMouseLeave={() => setChartTooltip(null)}
                     >
                       <span>{idx + 1}</span>
-                      <strong>{center.centerName}</strong>
+                      <strong>
+                        {center.centerName}
+                        <small>예측 점포 {predictedStores.toLocaleString()}점포</small>
+                      </strong>
                       <i><b style={{ width: `${width}%` }} /></i>
-                      <em>{Number(center.recommendedBox || 0).toLocaleString()}박스</em>
+                      <em>{boxQty.toLocaleString()}박스</em>
                     </div>
                   )
                 })}
@@ -2247,7 +2252,7 @@ function App() {
             <div>
               <span>MD 업무 포털</span>
               <strong>신상품 초도발주 의사결정을 시작합니다.</strong>
-              <p>이름과 직책을 입력하면 담당자명으로 대시보드가 표시됩니다. 현재 날짜 2025.12.26 기준의 예약 수요, 모델 추천량, 센터 배분을 확인합니다.</p>
+              <p>이름을 입력하면 담당자명으로 대시보드가 표시됩니다. 현재 날짜 2025.12.26 기준의 예약 수요, 모델 추천량, 센터 배분을 확인합니다.</p>
             </div>
           </div>
           <form className="login-form" onSubmit={handleLogin}>
@@ -2259,7 +2264,7 @@ function App() {
                   setLoginId(event.target.value)
                   setLoginError('')
                 }}
-                placeholder="예: 홍길동 MD, 김담당 책임"
+                placeholder="예: 홍길동"
               />
             </label>
             <label>

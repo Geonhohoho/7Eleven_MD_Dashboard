@@ -910,6 +910,17 @@ tbody tr { cursor:pointer; }
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+.forward-top-center strong small {
+  display:block;
+  margin-top:3px;
+  color:#64748b;
+  font-size:10px;
+  font-weight:850;
+  line-height:1.1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
 .forward-top-center i {
   grid-column:2 / 3;
   position:relative;
