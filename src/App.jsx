@@ -1441,29 +1441,18 @@ function App() {
         reservationQty: Number(forwardByName.get(center.centerName)?.reservationQty || 0),
       }))
     if (forwardCenters.length) {
-      const coords = {
-        '인천상온센터': [134, 132],
-        '인천B상온센터': [118, 145],
-        '구성상온센터': [170, 150],
-        '양주센터': [154, 104],
-        '성남센터': [186, 168],
-        '원주상온센터(K7)': [248, 164],
-        '천안상온센터': [196, 238],
-        '세종상온센터': [176, 260],
-        '대구센터': [298, 326],
-        'A광주상온센터': [154, 380],
-        '김제상온센터': [154, 324],
-        'A양산상온센터': [326, 430],
-        '울산상온센터(K7)': [352, 394],
-        'A의왕상온센터': [154, 162],
-        '제주상온센터': [158, 548],
-      }
       const maxQty = Math.max(...forwardCenters.map((center) => Number(center.recommendedQty || 0)), 1)
       const centerRows = [...forwardCenters].sort((a, b) => Number(b.recommendedQty || 0) - Number(a.recommendedQty || 0))
       const summaryRecommended = Number(forward.recommendedQty || centerRows.reduce((acc, c) => acc + Number(c.recommendedQty || 0), 0))
       const summaryReservation = Number(forward.reservationQty || centerRows.reduce((acc, c) => acc + Number(c.reservationQty || 0), 0))
       const summaryStores = Number(forward.predictedStores || centerRows.reduce((acc, c) => acc + Number(c.predictedStores || 0), 0))
       const ldu = boxUnitEa(row)
+      const summaryBox = Math.round(summaryRecommended / ldu)
+      const topCenters = centerRows.slice(0, 3)
+      const topQty = topCenters.reduce((acc, center) => acc + Number(center.recommendedQty || 0), 0)
+      const topBox = topCenters.reduce((acc, center) => acc + Number(center.recommendedBox || 0), 0)
+      const topShare = summaryRecommended > 0 ? Math.round((topQty / summaryRecommended) * 100) : 0
+      const topCenter = centerRows[0]
       return (
         <section className="inline-forward-gnn">
           <div className="forward-kpi-row">
@@ -1481,53 +1470,59 @@ function App() {
               <strong>{summaryStores.toLocaleString()}점포</strong>
             </article>
           </div>
-          <div className="forward-map-grid">
-            <div className="korea-demand-map" aria-label="센터별 예약주문 예측 지도">
-              <div className="map-caption">
+          <div className="forward-network-grid">
+            <div className="forward-demand-hub" aria-label="센터별 예약주문 예측 요약">
+              <div className="forward-network-head">
                 <strong>센터별 예약주문 예측</strong>
-                <span>원이 클수록 예약 기반 추천 초도 수량이 큽니다.</span>
+                <span>추천 초도 수량이 어느 센터에 집중되는지 순위와 비중으로 확인합니다.</span>
               </div>
-              <svg viewBox="0 0 430 620" role="img">
-                <defs>
-                  <filter id={`mapShadow-${row.rowKey}`} x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="14" stdDeviation="14" floodColor="#0f172a" floodOpacity="0.08" />
-                  </filter>
-                </defs>
-                <path
-                  className="korea-land"
-                  filter={`url(#mapShadow-${row.rowKey})`}
-                  d="M216 24 C242 52 248 82 238 111 C270 119 300 136 319 167 C345 209 334 251 357 286 C379 319 376 367 345 396 C324 416 312 439 318 468 C324 501 299 532 260 542 C221 552 188 540 156 551 C122 562 88 543 82 506 C77 474 95 451 82 420 C63 374 72 331 58 290 C41 239 62 206 87 178 C103 160 98 139 112 113 C130 79 164 77 180 55 C190 41 202 34 216 24 Z"
-                />
-                <path className="korea-region" d="M96 178 C150 186 180 178 210 146 C245 163 275 178 322 169" />
-                <path className="korea-region" d="M84 284 C133 258 184 254 226 285 C272 272 312 278 354 308" />
-                <path className="korea-region" d="M102 412 C158 386 215 397 262 432 C292 414 320 406 344 394" />
-                <path className="korea-region" d="M210 146 C208 206 218 246 226 285 C232 345 251 385 262 432" />
-                <path className="korea-region" d="M144 548 C168 536 200 538 228 550" />
-                <ellipse className="korea-jeju" cx="178" cy="580" rx="48" ry="18" />
-                {centerRows.map((center) => {
-                  const [x, y] = coords[center.centerName] || [215, 300]
+              <div className="forward-hub-main">
+                <div>
+                  <span>최대 배분 센터</span>
+                  <strong>{topCenter?.centerName || '-'}</strong>
+                  <small>{Number(topCenter?.recommendedBox || 0).toLocaleString()}박스 · {Number(topCenter?.predictedStores || 0).toLocaleString()}점포</small>
+                </div>
+                <div className="forward-hub-total">
+                  <b>{summaryBox.toLocaleString()}</b>
+                  <span>총 추천 박스</span>
+                </div>
+              </div>
+              <div className="forward-hub-summary">
+                <article>
+                  <small>상위 3센터 비중</small>
+                  <strong>{topShare}%</strong>
+                  <span>{topBox.toLocaleString()}박스</span>
+                </article>
+                <article>
+                  <small>분배 센터</small>
+                  <strong>{centerRows.length}개</strong>
+                  <span>전체 센터 기준</span>
+                </article>
+              </div>
+              <div className="forward-top-centers">
+                {topCenters.map((center, idx) => {
                   const qty = Number(center.recommendedQty || 0)
-                  const radius = 7 + Math.min(18, (qty / maxQty) * 18)
-                  const tone = qty / maxQty > 0.72 ? 'high' : qty / maxQty > 0.38 ? 'mid' : 'low'
+                  const width = Math.max(qty > 0 ? 5 : 0, Math.min(100, (qty / maxQty) * 100))
                   return (
-                    <g className={`map-center-node ${tone}`} key={`${row.rowKey}-map-${center.centerName}`}>
-                      <circle
-                        cx={x}
-                        cy={y}
-                        r={radius}
-                        onMouseEnter={(event) => showChartTooltip(event, [
-                          center.centerName,
-                          `예측 초도 ${qty.toLocaleString()}EA`,
-                          `${Number(center.recommendedBox || 0).toLocaleString()}박스 · 예측 점포 ${Number(center.predictedStores || 0).toLocaleString()}점포`,
-                        ])}
-                        onMouseMove={moveChartTooltip}
-                        onMouseLeave={() => setChartTooltip(null)}
-                      />
-                      <text x={x} y={y - radius - 6} textAnchor="middle">{center.centerName.replace('상온센터', '').replace('(K7)', '')}</text>
-                    </g>
+                    <div
+                      className="forward-top-center"
+                      key={`${row.rowKey}-top-network-${center.centerName}`}
+                      onMouseEnter={(event) => showChartTooltip(event, [
+                        `${idx + 1}순위 · ${center.centerName}`,
+                        `${Number(center.recommendedBox || 0).toLocaleString()}박스`,
+                        `${qty.toLocaleString()}EA · 예측 점포 ${Number(center.predictedStores || 0).toLocaleString()}점포`,
+                      ])}
+                      onMouseMove={moveChartTooltip}
+                      onMouseLeave={() => setChartTooltip(null)}
+                    >
+                      <span>{idx + 1}</span>
+                      <strong>{center.centerName}</strong>
+                      <i><b style={{ width: `${width}%` }} /></i>
+                      <em>{Number(center.recommendedBox || 0).toLocaleString()}박스</em>
+                    </div>
                   )
                 })}
-              </svg>
+              </div>
             </div>
             <div className="forward-center-list">
               {centerRows.slice(0, 15).map((center) => {
