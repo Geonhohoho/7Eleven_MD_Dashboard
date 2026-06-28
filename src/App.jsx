@@ -1319,9 +1319,9 @@ function App() {
                     setSimilarExpandedMap((prev) => ({ ...prev, [similarKey]: !prev[similarKey] }))
                   }}
                 >
-                  <span className="similar-date">{p.releaseDate}</span>
                   <span className="similar-product-name">
                     <span className="similar-title-line">
+                      <span className="similar-date">{p.releaseDate}</span>
                       <b>{p.itemName}</b>
                       <span className={`similar-case-pill ${similarTone}`}>{similarLabel}</span>
                     </span>

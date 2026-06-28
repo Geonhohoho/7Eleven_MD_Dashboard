@@ -356,34 +356,33 @@ tbody tr { cursor:pointer; }
   border-radius:0 0 16px 0;
 }
 .inline-detail-tabs {
-  display:flex;
-  flex-direction:row;
-  gap:8px;
+  display:grid;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+  gap:4px;
   align-self:stretch;
   align-items:center;
   border:1px solid #dbe3ea;
-  border-radius:18px;
-  background:#f8fafc;
-  padding:8px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.95), 0 1px 0 rgba(15,23,42,.03);
+  border-radius:16px;
+  background:#ffffff;
+  padding:6px;
+  box-shadow:0 1px 0 rgba(15,23,42,.03);
 }
 .inline-detail-tabs button {
   position:relative;
   display:grid;
-  grid-template-columns:26px minmax(0, 1fr);
-  column-gap:8px;
+  grid-template-columns:24px minmax(0, 1fr);
+  column-gap:9px;
   align-items:center;
-  flex:1 1 0;
   min-width:0;
-  min-height:54px;
+  min-height:48px;
   border:1px solid transparent;
-  border-radius:14px;
+  border-radius:12px;
   background:transparent;
   color:#334155;
-  padding:8px 10px;
+  padding:8px 11px;
   text-align:left;
   box-shadow:none;
-  transition:background .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease;
+  transition:background .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease, transform .16s ease;
 }
 .inline-detail-tabs button::before {
   content:"1";
@@ -391,21 +390,31 @@ tbody tr { cursor:pointer; }
   grid-row:1 / 3;
   display:grid;
   place-items:center;
-  width:26px;
-  height:26px;
+  width:24px;
+  height:24px;
   border-radius:999px;
-  background:#edf2f7;
+  background:#f1f5f9;
   color:#475569;
-  font-size:12px;
+  font-size:11px;
   font-weight:950;
-  box-shadow:inset 0 0 0 1px rgba(148,163,184,.35);
+  box-shadow:inset 0 0 0 1px rgba(148,163,184,.32);
+}
+.inline-detail-tabs button::after {
+  content:"";
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:-7px;
+  height:3px;
+  border-radius:999px;
+  background:transparent;
 }
 .inline-detail-tabs button:nth-child(2)::before { content:"2"; }
 .inline-detail-tabs button:nth-child(3)::before { content:"3"; }
 .inline-detail-tabs button:nth-child(4)::before { content:"4"; }
 .inline-detail-tabs button:nth-child(5)::before { content:"5"; }
 .inline-detail-tabs button:hover {
-  background:#ffffff;
+  background:#f8fafc;
   border-color:#e2e8f0;
   z-index:2;
 }
@@ -418,10 +427,12 @@ tbody tr { cursor:pointer; }
   grid-row:1;
   display:block;
   color:#0f172a;
-  font-size:13px;
+  font-size:12.5px;
   font-weight:950;
   line-height:1.15;
   white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 .inline-detail-tabs button span {
   grid-column:2;
@@ -437,11 +448,12 @@ tbody tr { cursor:pointer; }
   text-overflow:ellipsis;
 }
 .inline-detail-tabs button.active {
-  border-color:#16a34a;
-  background:#ffffff;
-  box-shadow:0 10px 22px rgba(12,122,67,.12), inset 0 0 0 1px rgba(22,163,74,.12);
+  border-color:#86efac;
+  background:linear-gradient(180deg,#f0fdf4 0%,#ffffff 100%);
+  box-shadow:0 8px 18px rgba(12,122,67,.10);
   z-index:3;
 }
+.inline-detail-tabs button.active::after { background:#16a34a; }
 .inline-detail-tabs button.active::before {
   background:#dcfce7;
   color:#166534;
@@ -1534,82 +1546,81 @@ tbody tr { cursor:pointer; }
   margin-top:8px;
   background:#fff;
   border-color:#e2e8f0;
-  padding:10px;
+  padding:12px;
 }
 .similar-history-compact { flex:1; display:flex; flex-direction:column; }
 .similar-history-compact .similar-history { flex:1; align-content:start; }
-.similar-history-compact .similar-card-head { margin-bottom:7px; }
+.similar-history-compact .similar-card-head { margin-bottom:9px; }
 .similar-history-compact .similar-row { min-height:58px; }
 .similar-history-card-wide .similar-history {
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:7px;
+  gap:8px;
   border:0;
   background:transparent;
   padding:0;
 }
 .similar-history-card-wide .similar-row {
-  grid-template-columns:76px minmax(0, 1fr) minmax(132px, 148px);
+  grid-template-columns:minmax(0, 1fr) minmax(118px, 136px);
   grid-template-areas:
-    "date product qty"
-    "date product qty";
-  gap:4px 10px;
+    "product qty";
+  gap:6px 12px;
   align-items:center;
   border:1px solid #e2e8f0;
-  border-radius:8px;
-  background:#fff;
-  padding:8px 10px;
-  min-height:72px;
+  border-radius:12px;
+  background:#ffffff;
+  padding:10px 12px;
+  min-height:66px;
+  box-shadow:0 1px 0 rgba(15,23,42,.02);
 }
 .similar-history-card-wide .similar-row.open {
   grid-template-areas:
-    "date product qty"
-    "date product qty"
-    "detail detail detail";
+    "product qty"
+    "detail detail";
 }
 .similar-history-card-wide .similar-row:last-child { border-bottom:1px solid #e2e8f0; }
 .similar-date {
-  display:block;
-  align-self:center;
+  display:inline-flex;
+  align-items:center;
+  flex:0 0 auto;
   min-height:0;
-  border:0;
-  border-radius:0;
-  background:transparent;
-  color:#64748b !important;
-  font-size:10.5px;
-  font-weight:850 !important;
-  padding:2px 0 0;
+  border:1px solid #cbd5e1;
+  border-radius:999px;
+  background:#f8fafc;
+  color:#475569 !important;
+  font-size:10px;
+  font-weight:900 !important;
+  padding:2px 7px;
   letter-spacing:0;
 }
-.similar-history-card-wide .similar-date { grid-area:date; }
 .similar-history-card-wide .similar-row span { min-width:0; }
 .similar-history-card-wide .similar-product-name {
   display:flex;
   flex-direction:column;
-  gap:4px;
+  gap:5px;
   min-width:0;
   white-space:normal;
   overflow:visible;
   line-height:1.25;
+  grid-area:product;
 }
 .similar-title-line {
   display:flex;
-  align-items:flex-start;
-  gap:7px;
+  align-items:center;
+  gap:6px;
   min-width:0;
-  flex-wrap:wrap;
-  overflow:visible !important;
+  flex-wrap:nowrap;
+  overflow:hidden !important;
 }
 .similar-title-line b {
-  flex:1 1 170px;
-  min-width:140px;
+  flex:1 1 auto;
+  min-width:0;
   overflow:hidden;
-  display:-webkit-box;
-  -webkit-line-clamp:2;
-  -webkit-box-orient:vertical;
-  white-space:normal;
+  display:block;
+  white-space:nowrap;
+  text-overflow:ellipsis;
   color:#0f172a;
-  font-size:12px;
+  font-size:12.5px;
   font-weight:950;
 }
 .similar-history-card-wide .similar-product-name small {
@@ -1618,12 +1629,12 @@ tbody tr { cursor:pointer; }
   gap:6px;
   margin-top:0;
   min-width:0;
-  white-space:normal;
-  flex-wrap:wrap;
-  overflow:visible;
+  white-space:nowrap;
+  flex-wrap:nowrap;
+  overflow:hidden;
   color:#64748b;
-  font-size:9.5px;
-  font-weight:750;
+  font-size:10px;
+  font-weight:800;
 }
 .similar-history-card-wide .similar-meta-line span {
   display:inline;
@@ -1646,7 +1657,7 @@ tbody tr { cursor:pointer; }
   flex-shrink:0;
   align-items:center;
   border-radius:999px;
-  padding:2px 5px;
+  padding:2px 7px;
   font-size:9.5px;
   font-weight:900;
   white-space:nowrap;
@@ -1671,7 +1682,7 @@ tbody tr { cursor:pointer; }
 .similar-order-summary {
   align-self:center;
   color:#0f172a;
-  font-size:13px;
+  font-size:14px;
   font-weight:950;
   line-height:1.25;
   white-space:nowrap;
@@ -1681,13 +1692,14 @@ tbody tr { cursor:pointer; }
   display:block;
   flex-basis:auto;
   color:#64748b;
-  font-size:9px;
+  font-size:9.5px;
   font-weight:750;
   line-height:1.25;
-  white-space:normal;
-  max-width:148px;
+  white-space:nowrap;
+  max-width:136px;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
-.similar-history-card-wide .similar-product-name { grid-area:product; }
 .similar-history-card-wide .similar-detail { grid-area:detail; }
 .dist-kpis { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px; }
 .kpi { font-size:11px; font-weight:700; border-radius:999px; padding:3px 8px; border:1px solid #d1d5db; background:#fff; color:#374151; }
@@ -3334,16 +3346,16 @@ tbody tr { cursor:pointer; }
   .table-wrap { border-radius:12px; }
   .past-table { min-width:1280px; }
   .similar-history-card-wide .similar-row {
-    grid-template-columns:70px minmax(0, 1fr);
+    grid-template-columns:1fr;
     grid-template-areas:
-      "date product"
-      "date qty";
+      "product"
+      "qty";
   }
   .similar-history-card-wide .similar-row.open {
     grid-template-areas:
-      "date product"
-      "date qty"
-      "detail detail";
+      "product"
+      "qty"
+      "detail";
   }
   .similar-history-card-wide .similar-row strong {
     align-items:flex-start;
