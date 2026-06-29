@@ -3441,3 +3441,338 @@ tbody tr { cursor:pointer; }
   .lifecycle-feature-list strong { text-align:left; }
   .lifecycle-center-row { grid-template-columns:1fr; }
 }
+
+@media (max-width: 760px) {
+  .page {
+    overflow-x:hidden;
+  }
+
+  .topbar {
+    height:auto;
+    padding:14px 16px;
+  }
+
+  .brand {
+    gap:10px;
+    min-width:0;
+  }
+
+  .logo {
+    width:38px;
+    height:38px;
+    border-radius:9px;
+    font-size:23px;
+    flex:0 0 auto;
+  }
+
+  .brand h1 {
+    font-size:17px;
+    line-height:1.22;
+    word-break:keep-all;
+  }
+
+  .brand p {
+    font-size:12px;
+  }
+
+  .container {
+    padding:14px 10px 24px;
+  }
+
+  .tabs {
+    gap:8px;
+    margin-bottom:14px;
+    overflow-x:auto;
+    padding-bottom:2px;
+    scrollbar-width:none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display:none;
+  }
+
+  .tab {
+    flex:0 0 auto;
+    font-size:15px;
+    padding:9px 10px 12px;
+    white-space:nowrap;
+  }
+
+  .tab span {
+    font-size:12px;
+    margin-left:5px;
+    padding:0 6px;
+  }
+
+  .criteria-strip {
+    align-items:flex-start;
+    gap:7px;
+    overflow-x:auto;
+    padding-bottom:2px;
+  }
+
+  .criteria-strip .kpi,
+  .criteria-label {
+    flex:0 0 auto;
+    white-space:nowrap;
+  }
+
+  .table-wrap {
+    border:0;
+    border-radius:0;
+    background:transparent;
+    overflow:visible;
+  }
+
+  .table-wrap table,
+  .past-table {
+    display:block;
+    width:100%;
+    min-width:0;
+  }
+
+  .table-wrap thead {
+    display:none;
+  }
+
+  .table-wrap tbody {
+    display:grid;
+    gap:10px;
+  }
+
+  .table-wrap tr {
+    width:100%;
+  }
+
+  .table-wrap tbody tr:not(.expand-row) {
+    display:block;
+    border:1px solid #dbe3ea;
+    border-radius:16px;
+    background:#fff;
+    padding:12px 13px;
+    box-shadow:0 8px 22px rgba(15,23,42,.06);
+  }
+
+  .table-wrap tbody tr:not(.expand-row) td {
+    display:grid;
+    grid-template-columns:94px minmax(0, 1fr);
+    gap:8px;
+    align-items:center;
+    width:100%;
+    border:0;
+    padding:7px 0;
+    background:transparent;
+    text-align:left;
+  }
+
+  .table-wrap tbody tr:not(.expand-row) td::before {
+    content:"";
+    color:#64748b;
+    font-size:11px;
+    font-weight:950;
+    line-height:1.25;
+  }
+
+  .table-wrap tbody tr:not(.expand-row) td.col-name,
+  .table-wrap tbody tr:not(.expand-row) td.past-col-name {
+    display:block;
+    padding-top:0;
+  }
+
+  .table-wrap tbody tr:not(.expand-row) td.col-name::before,
+  .table-wrap tbody tr:not(.expand-row) td.past-col-name::before {
+    display:none;
+  }
+
+  .table-wrap tbody tr:not(.expand-row) td.col-code::before { content:"상품코드"; }
+  .table-wrap tbody tr:not(.expand-row) td.col-release::before { content:"출시일"; }
+  .table-wrap tbody tr:not(.expand-row) td.col-cat::before { content:"카테고리"; }
+  .table-wrap tbody tr:not(.expand-row) td.col-price::before { content:"판매가"; }
+  .table-wrap tbody tr:not(.expand-row) td.col-goal::before { content:"도입률"; }
+  .table-wrap tbody tr:not(.expand-row) td.col-rate::before { content:"적정도"; }
+  .table-wrap tbody tr:not(.expand-row) td.col-reco::before { content:"발주량"; }
+  .table-wrap tbody tr:not(.expand-row) td.col-input::before { content:"수량 조정"; }
+  .table-wrap tbody tr:not(.expand-row) td.col-act::before { content:"처리"; }
+
+  .table-wrap tbody tr:not(.expand-row) td.past-col-code::before { content:"상품코드"; }
+  .table-wrap tbody tr:not(.expand-row) td.past-col-date::before { content:"출시일"; }
+  .table-wrap tbody tr:not(.expand-row) td.past-col-major::before { content:"대분류"; }
+  .table-wrap tbody tr:not(.expand-row) td.past-col-mid::before { content:"중분류"; }
+  .table-wrap tbody tr:not(.expand-row) td.past-col-sub::before { content:"소분류"; }
+  .table-wrap tbody tr:not(.expand-row) td.past-col-goal::before { content:"도입률"; }
+  .table-wrap tbody tr:not(.expand-row) td.past-col-qty::before { content:"초도물량"; }
+  .table-wrap tbody tr:not(.expand-row) td.past-col-rate::before { content:"출고/소화"; }
+
+  .product-cell strong {
+    font-size:15px;
+    line-height:1.35;
+  }
+
+  .reason-badges {
+    gap:5px;
+  }
+
+  .intro-rate-cell,
+  .order-compare-cell,
+  .rate-inline,
+  .price-cell {
+    width:100%;
+    min-width:0;
+  }
+
+  .intro-rate-line,
+  .order-compare-line {
+    grid-template-columns:72px minmax(0, 1fr);
+  }
+
+  .rate-inline {
+    grid-template-columns:52px minmax(0, 1fr);
+  }
+
+  .qty-input {
+    width:100%;
+    max-width:none;
+  }
+
+  .action-stack {
+    align-items:stretch;
+  }
+
+  .action-stack .confirm,
+  .action-note-select,
+  .action-note-select select {
+    width:100%;
+  }
+
+  .expand-row {
+    display:block;
+    width:100%;
+    margin-top:-6px;
+  }
+
+  .expand-row > td,
+  .today-inline-expand > td {
+    display:block;
+    position:static;
+    width:100%;
+    max-width:100%;
+    padding:0;
+    background:transparent;
+  }
+
+  .today-inline-detail {
+    display:grid;
+    grid-template-columns:1fr;
+    width:100%;
+    max-width:100%;
+    min-height:0;
+    gap:10px;
+  }
+
+  .today-inline-left,
+  .today-inline-center {
+    width:100%;
+    min-width:0;
+    min-height:0;
+    padding:12px;
+    border-radius:16px;
+  }
+
+  .inline-detail-tabs {
+    display:flex;
+    gap:7px;
+    overflow-x:auto;
+    padding:6px;
+    border-radius:14px;
+    scrollbar-width:none;
+  }
+
+  .inline-detail-tabs::-webkit-scrollbar {
+    display:none;
+  }
+
+  .inline-detail-tabs button {
+    flex:0 0 156px;
+    min-height:52px;
+    padding:8px 10px;
+  }
+
+  .inline-detail-tabs button strong {
+    font-size:12px;
+  }
+
+  .inline-detail-tabs button span {
+    font-size:9.5px;
+  }
+
+  .inline-detail-head h3 {
+    font-size:17px;
+    line-height:1.35;
+  }
+
+  .today-drawer-tags {
+    gap:5px;
+  }
+
+  .today-inline-center .center-bars {
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+  }
+
+  .today-inline-center .center-row {
+    grid-template-columns:1fr;
+    grid-template-rows:auto;
+    gap:7px;
+    min-height:0;
+    padding:9px 10px;
+  }
+
+  .today-inline-center .center-row span,
+  .today-inline-center .center-track,
+  .today-inline-center .center-edit {
+    grid-column:auto;
+    grid-row:auto;
+  }
+
+  .today-inline-center .center-row span {
+    white-space:normal;
+    overflow:visible;
+    text-overflow:clip;
+  }
+
+  .today-inline-center .center-edit {
+    align-items:stretch;
+    text-align:left;
+  }
+
+  .today-inline-center .center-qty-input {
+    width:100%;
+    height:34px;
+    font-size:13px;
+  }
+
+  .today-inline-center .center-edit small {
+    max-width:none;
+    white-space:normal;
+    font-size:10px;
+  }
+
+  .past-filter-panel,
+  .past-hero-stats,
+  .performance-kpis,
+  .lifecycle-kpis,
+  .gnn-kpis {
+    grid-template-columns:1fr;
+  }
+
+  .past-hero,
+  .today-hero {
+    padding:18px;
+  }
+
+  .past-hero-copy strong,
+  .today-profile strong {
+    font-size:21px;
+  }
+}
