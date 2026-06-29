@@ -292,18 +292,19 @@
 .ghost { border:1px solid #d1d5db; background:#fff; color:#111827; }
 .table-wrap { max-width:100%; min-width:0; background:#fff; border:1px solid #d1d5db; border-radius:16px; overflow:auto; }
 .empty-note { padding:12px 14px; border-bottom:1px solid #e5e7eb; font-size:13px; color:#92400e; background:#fffbeb; }
-table { width:100%; border-collapse:separate; border-spacing:0; min-width:1200px; table-layout:fixed; }
+table { width:100%; border-collapse:separate; border-spacing:0; min-width:1320px; table-layout:fixed; }
 th, td { padding:14px 12px; font-size:14px; text-align:left; border-bottom:1px solid #e5e7eb; background-clip:padding-box; vertical-align:middle; }
 th { background:#f9fafb; color:#6b7280; font-weight:700; }
-.col-code { width:9%; }
+.col-code { width:8%; }
 .col-name { width:14%; }
-.col-cat { width:8%; }
-.col-price { width:9%; }
+.col-release { width:8%; }
+.col-cat { width:7%; }
+.col-price { width:7%; }
 .col-goal { width:12%; }
-.col-rate { width:13%; }
+.col-rate { width:12%; }
 .col-reco { width:11%; }
-.col-input { width:12%; }
-.col-act { width:12%; text-align:center; padding-left:8px; padding-right:8px; }
+.col-input { width:11%; }
+.col-act { width:10%; text-align:center; padding-left:8px; padding-right:8px; }
 .past-table { min-width:1240px; }
 .past-table th,
 .past-table td { padding:12px 10px; }
@@ -1194,6 +1195,7 @@ tbody tr { cursor:pointer; }
   font-size:9px;
 }
 .code { color:#6b7280; }
+.release-date-cell { color:#334155; font-weight:900; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .cat { background:#e6f3ec; color:#0c7a43; border-radius:8px; padding:4px 8px; font-size:12px; font-weight:700; }
 .price-cell { display:block; }
 .price { font-weight:700; }

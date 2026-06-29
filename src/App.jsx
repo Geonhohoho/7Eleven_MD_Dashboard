@@ -2431,6 +2431,7 @@ function App() {
                   <tr>
                     <th className="col-code">상품코드</th>
                     <th className="col-name">상품명</th>
+                    <th className="col-release">출시일</th>
                     <th className="col-cat">카테고리</th>
                     <th className="col-price">판매가</th>
                     <th className="col-goal">목표/예측(GNN) 도입률</th>
@@ -2467,6 +2468,9 @@ function App() {
                               </div>
                             )}
                           </div>
+                        </td>
+                        <td className="col-release">
+                          <span className="release-date-cell">{r.releaseDate || '-'}</span>
                         </td>
                         <td className="col-cat"><span className="cat">{r.category}</span></td>
                         <td className="col-price">
@@ -2567,7 +2571,7 @@ function App() {
                       </tr>
                       {selectedItemCode === r.rowKey && data?.itemDetails?.[r.rowKey] && (
                         <tr className="expand-row today-inline-expand">
-                          <td colSpan={9}>
+                          <td colSpan={10}>
                             {(() => {
                               const intro = predictedIntroInfo(r)
                               const goalIntro = Number(r.goalIntroRate || 0)
@@ -2618,6 +2622,7 @@ function App() {
                                         <div>
                                           <div className="today-drawer-tags">
                                             <span>{r.itemCode}</span>
+                                            <span>출시 {r.releaseDate || '-'}</span>
                                             <span>{r.category}</span>
                                             <span className={outflowBand(currentOutflowRate(r)) === 'over' ? 'high' : outflowBand(currentOutflowRate(r)) === 'shortage' ? 'low' : 'ok'}>
                                               {outflowBand(currentOutflowRate(r)) === 'over' ? '과발주' : outflowBand(currentOutflowRate(r)) === 'shortage' ? '결품위험' : '정상'}
